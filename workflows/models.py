@@ -1,0 +1,155 @@
+import json
+import yaml
+from django.db import models
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+
+User = get_user_model()
+
+
+class WorkflowCategory(models.Model):
+    """
+    Categories for organizing workflows
+    """
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'workflow_categories'
+        verbose_name_plural = 'Workflow Categories'
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
+
+class Workflow(models.Model):
+    """
+    Represents a Nextflow workflow that can be executed
+    """
+    STATUS_CHOICES = [
+        ('enabled', 'Enabled'),
+        ('disabled', 'Disabled'),
+        ('maintenance', 'Maintenance'),
+    ]
+
+    id = models.CharField(max_length=255, primary_key=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    version = models.CharField(max_length=50, default='1.0.0')
+    website = models.URLField(blank=True)
+    category = models.ForeignKey(WorkflowCategory, on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Workflow configuration
+    yaml_config = models.TextField(help_text="YAML configuration for the workflow")
+    nextflow_script = models.TextField(blank=True, help_text="Path to the Nextflow script")
+    config_file = models.TextField(blank=True, help_text="Path to the Nextflow config file")
+    
+    # Status and permissions
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='enabled')
+    allowed_groups = models.ManyToManyField('auth.Group', blank=True, 
+                                          help_text="Groups that can access this workflow")
+    public = models.BooleanField(default=False, help_text="Publicly accessible to all users")
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        db_table = 'workflows'
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.name} (v{self.version})"
+    
+    def get_config(self):
+        """Parse and return the YAML configuration"""
+        try:
+            return yaml.safe_load(self.yaml_config)
+        except yaml.YAMLError as e:
+            raise ValidationError(f"Invalid YAML configuration: {e}")
+    
+    def get_inputs(self):
+        """Get workflow input parameters from configuration"""
+        config = self.get_config()
+        return config.get('workflow', {}).get('inputs', [])
+    
+    def get_outputs(self):
+        """Get workflow output parameters from configuration"""
+        config = self.get_config()
+        return config.get('workflow', {}).get('outputs', [])
+    
+    def get_steps(self):
+        """Get workflow steps from configuration"""
+        config = self.get_config()
+        return config.get('workflow', {}).get('steps', [])
+    
+    def can_access(self, user):
+        """Check if user can access this workflow"""
+        if not user.is_authenticated:
+            return False
+        
+        if self.public:
+            return True
+        
+        if user.is_superuser or user.is_admin_user():
+            return True
+        
+        # Check group membership
+        user_groups = user.groups.all()
+        return self.allowed_groups.filter(id__in=[g.id for g in user_groups]).exists()
+
+
+class WorkflowParameter(models.Model):
+    """
+    Input/Output parameters for workflows
+    """
+    PARAMETER_TYPES = [
+        ('file', 'File'),
+        ('folder', 'Folder'),
+        ('text', 'Text'),
+        ('number', 'Number'),
+        ('checkbox', 'Checkbox'),
+        ('list', 'List'),
+        ('textarea', 'Textarea'),
+    ]
+
+    workflow = models.ForeignKey(Workflow, on_delete=models.CASCADE, related_name='parameters')
+    parameter_id = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    parameter_type = models.CharField(max_length=20, choices=PARAMETER_TYPES)
+    required = models.BooleanField(default=True)
+    default_value = models.TextField(blank=True)
+    values = models.JSONField(default=dict, blank=True)  # For list/checkbox options
+    is_input = models.BooleanField(default=True)
+    is_output = models.BooleanField(default=False)
+    order = models.IntegerField(default=0)
+    
+    class Meta:
+        db_table = 'workflow_parameters'
+        ordering = ['order', 'name']
+        unique_together = ['workflow', 'parameter_id']
+    
+    def __str__(self):
+        return f"{self.workflow.name} - {self.name}"
+
+
+class WorkflowExecution(models.Model):
+    """
+    Tracks workflow executions and their results
+    """
+    workflow = models.ForeignKey(Workflow, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    parameters = models.JSONField(default=dict)
+    status = models.CharField(max_length=20, default='pending')
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    results = models.JSONField(default=dict, blank=True)
+    logs = models.TextField(blank=True)
+    
+    class Meta:
+        db_table = 'workflow_executions'
+        ordering = ['-started_at']

@@ -1,0 +1,21 @@
+# Django and core dependencies
+Django==6.0.4
+djangorestframework==3.17.1
+django-cors-headers==4.9.0
+
+# Database
+psycopg2-binary==2.9.12
+
+# Task queue and messaging
+celery==5.6.3
+redis==7.4.0
+
+# WebSocket support
+channels==4.3.2
+channels-redis==4.3.0
+
+# Configuration and data handling
+PyYAML==6.0.3
+
+# Additional utilities
+python-dateutil==2.9.0.post0
