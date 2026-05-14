@@ -95,6 +95,22 @@ class RegisterView(APIView):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            activation_url = request.build_absolute_uri(
+                f'/activate/{user.activation_key}'
+            )
+            send_mail(
+                subject='Activate your Cloudgene account',
+                message=(
+                    f'Hi {user.full_name or user.username},\n\n'
+                    f'Click the link below to activate your account.\n\n'
+                    f'{activation_url}\n\n'
+                    f'If you did not register for Cloudgene, '
+                    f'you can ignore this email.'
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
             return Response({
                 'user': UserSerializer(user).data,
                 'message': (
