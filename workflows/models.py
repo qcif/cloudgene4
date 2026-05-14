@@ -66,8 +66,10 @@ class Workflow(models.Model):
     
     def get_config(self):
         """Parse and return the YAML configuration"""
+        if not self.yaml_config.strip():
+            return {}
         try:
-            return yaml.safe_load(self.yaml_config)
+            return yaml.safe_load(self.yaml_config) or {}
         except yaml.YAMLError as e:
             raise ValidationError(f"Invalid YAML configuration: {e}")
     

@@ -14,7 +14,7 @@ const success = ref('')
 onMounted(async () => {
   try {
     const { data } = await getTemplates()
-    templates.value = data
+    templates.value = data.results || []
   } finally {
     loading.value = false
   }
@@ -45,7 +45,7 @@ async function save(tmpl) {
     <LoadingSpinner v-if="loading" />
 
     <div v-else>
-      <div v-for="tmpl in templates" :key="tmpl.id" class="card mb-4">
+      <div v-for="tmpl in templates" :key="tmpl.id" class="card mb-4" v-if="tmpl && tmpl.id">
         <div class="card-header d-flex justify-content-between align-items-center">
           <strong>{{ tmpl.name }}</strong>
           <button

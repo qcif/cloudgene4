@@ -61,6 +61,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if email_error:
             raise serializers.ValidationError({'email': email_error})
 
+        # Check for duplicate email
+        if User.objects.filter(email=data['email']).exists():
+            raise serializers.ValidationError({'email': 'A user with this email address already exists.'})
+
+        # Check for duplicate username
+        if User.objects.filter(username=data['username']).exists():
+            raise serializers.ValidationError({'username': 'A user with this username already exists.'})
+
         return data
 
     def create(self, validated_data):

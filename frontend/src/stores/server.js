@@ -16,15 +16,18 @@ export const useServerStore = defineStore('server', {
           getNavbarItems(),
           getTemplates(),
         ])
-        this.navbarItems = navRes.data
+        this.navbarItems = navRes.data.results || []
         const map = {}
-        for (const t of tmplRes.data) {
+        const templates = tmplRes.data.results || []
+        for (const t of templates) {
           map[t.name] = t.content
         }
         this.templates = map
         this.loaded = true
-      } catch {
-        // server store is best-effort; non-fatal
+      } catch (error) {
+        console.warn('Failed to load server data:', error)
+        // Ensure navbarItems is always an array
+        this.navbarItems = this.navbarItems || []
       }
     },
   },

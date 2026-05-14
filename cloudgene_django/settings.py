@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'channels',
+    'django_celery_results',
     'accounts',
     'workflows',
     'jobs',
@@ -158,8 +159,8 @@ REST_FRAMEWORK = {
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Celery settings
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = 'sqla+sqlite:///' + str(BASE_DIR / 'celery.db')
+CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -185,7 +186,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800
 # for production (e.g. django.core.mail.backends.smtp.EmailBackend).
 EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
-    'django.core.mail.backends.console.EmailBackend',
+    'django.core.mail.backends.filebased.EmailBackend',
 )
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
@@ -193,6 +194,7 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'qfab_smtp@qfab.org')
+EMAIL_FILE_PATH = BASE_DIR / 'emails'
 
 # Cloudgene specific settings
 CLOUDGENE_CONFIG_FILE = BASE_DIR / 'cloudgene_config.yaml'

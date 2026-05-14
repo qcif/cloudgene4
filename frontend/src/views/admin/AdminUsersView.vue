@@ -41,7 +41,7 @@ async function fetchUsers(page = 1) {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchUsers(), listGroups().then((r) => { groups.value = r.data })])
+  await Promise.all([fetchUsers(), listGroups().then((r) => { groups.value = r.data.results || [] })])
 })
 
 async function doDelete() {
@@ -117,7 +117,7 @@ async function toggleGroup(user, groupName) {
                 <td><small>{{ user.email }}</small></td>
                 <td><small>{{ user.last_login ? new Date(user.last_login).toLocaleDateString() : '-' }}</small></td>
                 <td>
-                  <div v-for="g in groups" :key="g.id" class="form-check form-check-inline">
+                  <div v-for="g in groups" :key="g.id" class="form-check form-check-inline" v-if="g && g.id">
                     <input
                       type="checkbox"
                       class="form-check-input"
