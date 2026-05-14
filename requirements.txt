@@ -19,3 +19,4 @@ PyYAML==6.0.3
 
 # Additional utilities
 python-dateutil==2.9.0.post0
+python-dotenv==1.1.0

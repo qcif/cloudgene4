@@ -1,16 +1,18 @@
 """
 Authentication and user management views
 """
-from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action
+from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from django.contrib.auth import authenticate, login, logout
+from rest_framework.authtoken.models import Token
+from django.conf import settings
+from django.contrib.auth import login, logout
 from django.contrib.auth.models import Group
 from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.utils import timezone
 
-from .models import User, UserToken
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, GroupSerializer,
     LoginSerializer, PasswordResetSerializer
@@ -49,7 +51,7 @@ class GroupViewSet(viewsets.ModelViewSet):
 
 class LoginView(APIView):
     """
-    User login view
+    User login — returns a DRF token and the serialized user.
     """
     permission_classes = [AllowAny]
 
@@ -58,13 +60,17 @@ class LoginView(APIView):
         if serializer.is_valid():
             user = serializer.validated_data['user']
             login(request, user)
+            token, _ = Token.objects.get_or_create(user=user)
             return Response({
+                'token': token.key,
                 'user': UserSerializer(user).data,
-                'message': 'Login successful'
+                'message': 'Login successful',
             })
+        errors = serializer.errors.get(
+            'non_field_errors', ['Invalid credentials']
+        )
         return Response(
-            {'error': 'Invalid credentials'}, 
-            status=status.HTTP_400_BAD_REQUEST
+            {'message': errors[0]}, status=status.HTTP_400_BAD_REQUEST
         )
 
 
@@ -91,9 +97,15 @@ class RegisterView(APIView):
             user = serializer.save()
             return Response({
                 'user': UserSerializer(user).data,
-                'message': 'Registration successful. Please check your email for activation instructions.'
+                'message': (
+                    'Registration successful. '
+                    'Please check your email for activation instructions.'
+                ),
             }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'message': str(next(iter(serializer.errors.values()))[0])},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class ActivateAccountView(APIView):
@@ -104,38 +116,90 @@ class ActivateAccountView(APIView):
 
     def get(self, request, activation_key):
         try:
-            user = User.objects.get(activation_key=activation_key, is_active=False)
+            user = User.objects.get(
+                activation_key=activation_key, is_active=False
+            )
             user.is_active = True
             user.activation_key = None
             user.save()
             return Response({'message': 'Account activated successfully'})
         except User.DoesNotExist:
             return Response(
-                {'error': 'Invalid activation key'}, 
-                status=status.HTTP_400_BAD_REQUEST
+                {'message': 'Invalid activation key'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
 
 class PasswordResetView(APIView):
-    """
-    Password reset request view
-    """
     permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
-        if serializer.is_valid():
-            # Send password reset email (implementation needed)
-            return Response({'message': 'Password reset email sent'})
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        import uuid
+        user = User.objects.get(email=serializer.validated_data['email'])
+        user.password_reset_token = str(uuid.uuid4())
+        user.password_reset_expires = (
+            timezone.now() + timezone.timedelta(hours=24)
+        )
+        user.save()
+
+        reset_url = request.build_absolute_uri(
+            f'/recover/{user.password_reset_token}'
+        )
+        send_mail(
+            subject='Reset your Cloudgene password',
+            message=(
+                f'Hi {user.full_name or user.username},\n\n'
+                f'Click the link below to reset your password. '
+                f'This link expires in 24 hours.\n\n'
+                f'{reset_url}\n\n'
+                f'If you did not request a password reset, '
+                f'you can ignore this email.'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
+        return Response({'message': 'Password reset email sent'})
 
 
 class PasswordResetConfirmView(APIView):
-    """
-    Password reset confirmation view
-    """
     permission_classes = [AllowAny]
 
     def post(self, request, token):
-        # Implement password reset confirmation logic
+        try:
+            user = User.objects.get(password_reset_token=token)
+        except User.DoesNotExist:
+            return Response(
+                {'message': 'Invalid or expired reset link.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if (
+            user.password_reset_expires is None
+            or timezone.now() > user.password_reset_expires
+        ):
+            return Response(
+                {'message': 'This reset link has expired.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        password = request.data.get('password', '')
+        error = User.validate_password(password)
+        if error:
+            return Response(
+                {'message': error}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.set_password(password)
+        user.password_reset_token = None
+        user.password_reset_expires = None
+        user.save()
+
         return Response({'message': 'Password reset successful'})

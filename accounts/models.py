@@ -11,6 +11,10 @@ class User(AbstractUser):
     """
     full_name = models.CharField(max_length=255, blank=True, default='')
     activation_key = models.CharField(max_length=255, blank=True, null=True)
+    password_reset_token = models.CharField(
+        max_length=255, blank=True, null=True
+    )
+    password_reset_expires = models.DateTimeField(null=True, blank=True)
     api_token = models.CharField(max_length=255, blank=True, default='')
     last_login_date = models.DateTimeField(null=True, blank=True)
     locked_until = models.DateTimeField(null=True, blank=True)
