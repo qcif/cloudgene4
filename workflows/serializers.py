@@ -12,10 +12,17 @@ class WorkflowCategorySerializer(serializers.ModelSerializer):
 
 
 class WorkflowParameterSerializer(serializers.ModelSerializer):
+    # Frontend compatibility fields
+    id = serializers.CharField(source='parameter_id', read_only=True)
+    type = serializers.CharField(source='parameter_type', read_only=True)
+    label = serializers.CharField(source='name', read_only=True)
+    value = serializers.CharField(source='default_value', read_only=True)
+    
     class Meta:
         model = WorkflowParameter
         fields = ['parameter_id', 'name', 'description', 'parameter_type', 
-                 'required', 'default_value', 'values', 'is_input', 'is_output', 'order']
+                 'required', 'default_value', 'values', 'is_input', 'is_output', 'order',
+                 'id', 'type', 'label', 'value']
 
 
 class WorkflowSerializer(serializers.ModelSerializer):
