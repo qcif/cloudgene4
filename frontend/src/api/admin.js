@@ -23,3 +23,9 @@ export const getSystemLogs = (params = {}) =>
 
 export const getCounters = () =>
   client.get('/admin/counters/')
+
+export const getWorkflowSettings = (workflowId) =>
+  client.get(`/admin/workflows/${workflowId}/settings/`)
+
+export const updateWorkflowSettings = (workflowId, data) =>
+  client.patch(`/admin/workflows/${workflowId}/settings/`, data)

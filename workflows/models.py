@@ -46,6 +46,12 @@ class Workflow(models.Model):
     nextflow_script = models.TextField(blank=True, help_text="Path to the Nextflow script")
     config_file = models.TextField(blank=True, help_text="Path to the Nextflow config file")
     
+    # Nextflow runtime configuration
+    nextflow_profile = models.CharField(max_length=255, blank=True, help_text="Nextflow profile to use")
+    working_directory = models.TextField(blank=True, help_text="Working directory for Nextflow execution")
+    env_vars = models.TextField(blank=True, help_text="Environment variables (written to nextflow.env)")
+    nextflow_config = models.TextField(blank=True, help_text="Nextflow configuration (written to nextflow.config)")
+    
     # Status and permissions
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='enabled')
     allowed_groups = models.ManyToManyField('auth.Group', blank=True, 
