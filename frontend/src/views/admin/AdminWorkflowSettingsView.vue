@@ -21,7 +21,9 @@ onMounted(async () => {
       listGroups(),
     ])
     workflow.value = wfRes.data
-    groups.value = grpRes.data
+    groups.value = grpRes.data?.results || grpRes.data || []
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Failed to load workflow settings'
   } finally {
     loading.value = false
   }
@@ -57,7 +59,7 @@ onMounted(async () => {
         <div class="card-header">Allowed Groups</div>
         <div class="card-body">
           <div v-if="!groups.length" class="text-muted">No groups defined.</div>
-          <div v-for="g in groups" :key="g.id" class="form-check">
+          <div v-for="g in groups" :key="g?.id || 'unknown'" class="form-check" v-if="g">
             <input
               type="checkbox"
               class="form-check-input"
@@ -92,6 +94,14 @@ onMounted(async () => {
           </table>
         </div>
       </div>
+    </template>
+
+    <template v-else-if="error">
+      <AlertMessage :message="error" />
+    </template>
+
+    <template v-else>
+      <AlertMessage message="Workflow not found." />
     </template>
   </AdminLayout>
 </template>

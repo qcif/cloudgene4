@@ -30,11 +30,12 @@ class WorkflowSerializer(serializers.ModelSerializer):
     parameters = WorkflowParameterSerializer(many=True, read_only=True)
     inputs = serializers.SerializerMethodField()
     outputs = serializers.SerializerMethodField()
+    allowed_groups = serializers.StringRelatedField(many=True, read_only=True)
     
     class Meta:
         model = Workflow
         fields = ['id', 'name', 'description', 'version', 'website', 'category_name',
-                 'status', 'public', 'created_at', 'updated_at', 'parameters', 'inputs', 'outputs']
+                 'status', 'public', 'created_at', 'updated_at', 'parameters', 'inputs', 'outputs', 'allowed_groups']
         read_only_fields = ['created_at', 'updated_at']
     
     def get_inputs(self, obj):
