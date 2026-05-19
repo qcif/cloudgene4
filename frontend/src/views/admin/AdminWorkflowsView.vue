@@ -1,17 +1,18 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { listWorkflows } from '@/api/workflows'
-import { listGroups, updateUser } from '@/api/users'
-import { updateWorkflowSettings } from '@/api/admin'
+import { listGroups } from '@/api/users'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import AlertMessage from '@/components/common/AlertMessage.vue'
+import WorkflowGroupModal from '@/components/admin/WorkflowGroupModal.vue'
 
 const workflows = ref([])
 const groups = ref([])
 const loading = ref(true)
 const error = ref('')
 const success = ref('')
+const selectedWorkflow = ref(null)
 
 const statusBadge = { enabled: 'success', disabled: 'secondary', maintenance: 'warning' }
 
@@ -30,46 +31,26 @@ onMounted(async () => {
   }
 })
 
-const toggleWorkflowGroup = async (workflow, groupName) => {
-  const current = workflow.allowed_groups ?? []
-  const isCurrentlyAllowed = current.some(g => g === groupName || g.name === groupName)
-  
-  try {
-    error.value = ''
+const openGroupModal = (workflow) => {
+  selectedWorkflow.value = workflow
+}
+
+const handleWorkflowUpdated = () => {
+  // Refresh workflows to get updated data
+  // In a full implementation, you might want to refresh the list
+  success.value = 'Workflow access updated successfully'
+  setTimeout(() => {
     success.value = ''
-    
-    // Determine new group list
-    let newGroupNames
-    if (isCurrentlyAllowed) {
-      // Remove the group
-      newGroupNames = current
-        .filter(g => g !== groupName && g.name !== groupName)
-        .map(g => typeof g === 'string' ? g : g.name)
-    } else {
-      // Add the group
-      newGroupNames = [
-        ...current.map(g => typeof g === 'string' ? g : g.name),
-        groupName
-      ]
-    }
-    
-    // Update via API
-    const response = await updateWorkflowSettings(workflow.id, {
-      allowed_group_names: newGroupNames
-    })
-    
-    // Update local state with the response
-    workflow.allowed_groups = response.data.allowed_groups || newGroupNames
-    
-    success.value = `Group ${isCurrentlyAllowed ? 'removed from' : 'added to'} ${workflow.name}`
-    
-    // Clear success message after 3 seconds
-    setTimeout(() => {
-      success.value = ''
-    }, 3000)
-  } catch (err) {
-    error.value = err.response?.data?.message || 'Failed to update workflow group membership'
-  }
+  }, 3000)
+}
+
+const getAssignedGroupNames = (workflow) => {
+  const groups = workflow.allowed_groups || []
+  return groups.map(g => typeof g === 'string' ? g : g.name || g)
+}
+
+const getGroupCount = (workflow) => {
+  return getAssignedGroupNames(workflow).length
 }
 </script>
 
@@ -106,24 +87,28 @@ const toggleWorkflowGroup = async (workflow, groupName) => {
                 </span>
               </td>
               <td>
-                <div v-if="wf.public" class="d-flex align-items-center gap-2">
-                  <span class="badge bg-info">Public</span>
-                  <small class="text-muted">(All users)</small>
-                </div>
-                <div v-else class="d-flex align-items-center gap-1 flex-wrap">
-                  <div v-for="g in groups" :key="g.id" class="form-check form-check-inline mb-1" v-if="g && g.id">
-                    <input
-                      type="checkbox"
-                      class="form-check-input"
-                      :id="`wf-${wf.id}-${g.id}`"
-                      :checked="(wf.allowed_groups ?? []).some(ag => ag === g.name || (ag.name && ag.name === g.name))"
-                      @change="toggleWorkflowGroup(wf, g.name)"
-                    />
-                    <label :for="`wf-${wf.id}-${g.id}`" class="form-check-label small">
-                      {{ g.name }}
-                    </label>
+                <div class="d-flex align-items-center gap-2">
+                  <div v-if="wf.public">
+                    <span class="badge bg-info">Public</span>
+                    <small class="text-muted ms-2">(All users)</small>
                   </div>
-                  <span v-if="!groups.length" class="badge bg-light text-dark">No groups available</span>
+                  <div v-else class="d-flex flex-column">
+                    <button 
+                      class="btn btn-sm btn-outline-primary d-flex align-items-center gap-2"
+                      @click="openGroupModal(wf)"
+                    >
+                      <i class="fas fa-users"></i>
+                      <span v-if="getGroupCount(wf) === 0" class="text-warning">
+                        No groups
+                      </span>
+                      <span v-else>
+                        {{ getGroupCount(wf) }} group{{ getGroupCount(wf) !== 1 ? 's' : '' }}
+                      </span>
+                    </button>
+                    <div v-if="getGroupCount(wf) > 0" class="small text-muted mt-1">
+                      {{ getAssignedGroupNames(wf).slice(0, 2).join(', ') }}{{ getGroupCount(wf) > 2 ? '...' : '' }}
+                    </div>
+                  </div>
                 </div>
               </td>
               <td>
@@ -139,5 +124,13 @@ const toggleWorkflowGroup = async (workflow, groupName) => {
         </table>
       </div>
     </div>
+    
+    <WorkflowGroupModal
+      v-if="selectedWorkflow"
+      :workflow="selectedWorkflow"
+      :available-groups="groups"
+      @close="selectedWorkflow = null"
+      @updated="handleWorkflowUpdated"
+    />
   </AdminLayout>
 </template>
