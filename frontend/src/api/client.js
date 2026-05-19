@@ -2,10 +2,18 @@ import axios from 'axios'
 
 const client = axios.create({
   baseURL: '/api',
-  headers: { 'Content-Type': 'application/json' },
 })
 
 client.interceptors.request.use((config) => {
+  // Auto-detect content type based on data
+  if (config.data instanceof FormData) {
+    // Let axios handle FormData content-type with boundary
+    delete config.headers['Content-Type']
+  } else if (config.data && typeof config.data === 'object') {
+    // Set JSON content-type for object data
+    config.headers['Content-Type'] = 'application/json'
+  }
+  
   const token = localStorage.getItem('cg_token')
   if (token) {
     config.headers['Authorization'] = `Token ${token}`

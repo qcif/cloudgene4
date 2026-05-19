@@ -7,7 +7,7 @@ export const getJob = (id) =>
   client.get(`/jobs/${id}/`)
 
 export const submitJob = (data) =>
-  client.post('/jobs/', data, { headers: { 'Content-Type': 'multipart/form-data' } })
+  client.post('/jobs/', data)
 
 export const cancelJob = (id) =>
   client.post(`/jobs/${id}/cancel/`)
