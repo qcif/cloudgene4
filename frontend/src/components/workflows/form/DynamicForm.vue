@@ -13,6 +13,9 @@ const props = defineProps({
 })
 const emit = defineEmits(['submit'])
 
+// Expose onSubmit method for parent component access
+defineExpose({ onSubmit })
+
 const values = reactive({})
 
 // Seed defaults

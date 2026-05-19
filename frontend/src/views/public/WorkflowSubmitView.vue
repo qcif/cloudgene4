@@ -69,7 +69,7 @@ async function handleSubmit(formData) {
 
         <AlertMessage :message="error" />
 
-        <form @submit.prevent="$refs.dynForm.$emit('submit', jobName)">
+        <form @submit.prevent="$refs.dynForm.onSubmit(jobName)">
           <div class="mb-4">
             <label for="job-name" class="form-label fw-semibold">Job Name:</label>
             <input
