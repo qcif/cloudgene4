@@ -111,9 +111,37 @@ class JobSubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Job
         fields = ['workflow_id', 'name', 'parameters']
-        extra_kwargs = {
-            'parameters': {'required': True}
-        }
+    
+    def to_internal_value(self, data):
+        """
+        Handle FormData by converting it to the expected format
+        """
+        # If data is FormData (multipart form), extract parameters
+        if hasattr(data, 'getlist'):
+            # This is FormData - extract parameters into a dict
+            parameters = {}
+            workflow_id = data.get('workflow_id')
+            job_name = data.get('job_name')
+            
+            # Process all fields except special ones
+            for key in data.keys():
+                if key not in ['workflow_id', 'job_name']:
+                    values = data.getlist(key)
+                    if len(values) == 1:
+                        parameters[key] = values[0]
+                    else:
+                        parameters[key] = values
+            
+            # Create structured data
+            structured_data = {
+                'workflow_id': workflow_id,
+                'name': job_name,
+                'parameters': parameters
+            }
+            
+            return super().to_internal_value(structured_data)
+        
+        return super().to_internal_value(data)
     
     def validate_workflow_id(self, value):
         try:
@@ -134,9 +162,12 @@ class JobSubmissionSerializer(serializers.ModelSerializer):
         if workflow_id:
             try:
                 workflow = Workflow.objects.get(id=workflow_id)
+                # Get workflow parameters from the model
+                workflow_params = workflow.parameters.filter(is_input=True)
+                
                 required_params = [
-                    param['id'] for param in workflow.get_inputs() 
-                    if param.get('required', True)
+                    param.parameter_id for param in workflow_params 
+                    if param.required
                 ]
                 
                 for param_id in required_params:
