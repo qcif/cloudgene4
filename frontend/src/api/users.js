@@ -14,3 +14,9 @@ export const deleteUser = (id) =>
 
 export const listGroups = () =>
   client.get('/groups/')
+
+export const createGroup = (data) =>
+  client.post('/groups/', data)
+
+export const deleteGroup = (id) =>
+  client.delete(`/groups/${id}/`)

@@ -12,4 +12,5 @@ admin_router.register(r'workflows', views.WorkflowAdminViewSet, basename='admin-
 urlpatterns = [
     path('api/', include(router.urls)),
     path('api/admin/', include(admin_router.urls)),
+    path('api/admin/workflows/<str:workflow_id>/settings/', views.WorkflowSettingsAPIView.as_view(), name='workflow-settings'),
 ]

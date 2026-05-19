@@ -6,6 +6,7 @@ import Pagination from '@/components/common/Pagination.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import AlertMessage from '@/components/common/AlertMessage.vue'
+import GroupManagementModal from '@/components/admin/GroupManagementModal.vue'
 
 const users = ref([])
 const total = ref(0)
@@ -18,6 +19,7 @@ const groups = ref([])
 const confirmUser = ref(null)
 const confirmLoading = ref(false)
 const error = ref('')
+const showGroupModal = ref(false)
 
 const totalPages = () => Math.ceil(total.value / pageSize)
 
@@ -69,6 +71,20 @@ async function toggleGroup(user, groupName) {
     error.value = 'Group update failed.'
   }
 }
+
+async function refreshGroups() {
+  try {
+    const response = await listGroups()
+    groups.value = response.data.results || []
+  } catch (e) {
+    console.error('Failed to refresh groups:', e)
+  }
+}
+
+function handleGroupsUpdated() {
+  // Refresh both groups and users to get updated membership
+  Promise.all([refreshGroups(), fetchUsers(currentPage.value)])
+}
 </script>
 
 <template>
@@ -117,17 +133,26 @@ async function toggleGroup(user, groupName) {
                 <td><small>{{ user.email }}</small></td>
                 <td><small>{{ user.last_login ? new Date(user.last_login).toLocaleDateString() : '-' }}</small></td>
                 <td>
-                  <div v-for="g in groups" :key="g.id" class="form-check form-check-inline" v-if="g && g.id">
-                    <input
-                      type="checkbox"
-                      class="form-check-input"
-                      :id="`g-${user.id}-${g.id}`"
-                      :checked="(user.groups ?? []).includes(g.name)"
-                      @change="toggleGroup(user, g.name)"
-                    />
-                    <label :for="`g-${user.id}-${g.id}`" class="form-check-label small">
-                      {{ g.name }}
-                    </label>
+                  <div class="d-flex align-items-center gap-2">
+                    <div v-for="g in groups" :key="g.id" class="form-check form-check-inline" v-if="g && g.id">
+                      <input
+                        type="checkbox"
+                        class="form-check-input"
+                        :id="`g-${user.id}-${g.id}`"
+                        :checked="(user.groups ?? []).includes(g.name)"
+                        @change="toggleGroup(user, g.name)"
+                      />
+                      <label :for="`g-${user.id}-${g.id}`" class="form-check-label small">
+                        {{ g.name }}
+                      </label>
+                    </div>
+                    <button
+                      class="btn btn-sm btn-outline-primary ms-2"
+                      @click="showGroupModal = true"
+                      title="Manage groups"
+                    >
+                      <i class="fas fa-cog"></i>
+                    </button>
                   </div>
                 </td>
                 <td>
@@ -163,6 +188,15 @@ async function toggleGroup(user, groupName) {
       :loading="confirmLoading"
       @confirm="doDelete"
       @cancel="confirmUser = null"
+    />
+    
+    <GroupManagementModal
+      v-if="showGroupModal"
+      :show="showGroupModal"
+      :users="users"
+      :initial-groups="groups"
+      @close="showGroupModal = false"
+      @groups-updated="handleGroupsUpdated"
     />
   </AdminLayout>
 </template>

@@ -5,7 +5,10 @@ from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.views import APIView
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
 from .models import Workflow, WorkflowCategory
 from .serializers import WorkflowSerializer, WorkflowCategorySerializer, WorkflowSettingsSerializer
@@ -53,21 +56,27 @@ class WorkflowAdminViewSet(viewsets.ModelViewSet):
     queryset = Workflow.objects.all()
     serializer_class = WorkflowSettingsSerializer
     permission_classes = [IsAdminUser]
+
+
+class WorkflowSettingsAPIView(APIView):
+    """
+    API view for workflow settings management
+    """
+    permission_classes = [IsAdminUser]
     
-    @action(detail=True, methods=['get', 'patch'], url_path='settings')
-    def settings(self, request, pk=None):
-        """
-        Get or update workflow settings including Nextflow configuration
-        """
-        workflow = self.get_object()
+    def get(self, request, workflow_id):
+        """Get workflow settings"""
+        workflow = get_object_or_404(Workflow, id=workflow_id)
+        serializer = WorkflowSettingsSerializer(workflow)
+        return Response(serializer.data)
+    
+    def patch(self, request, workflow_id):
+        """Update workflow settings"""
+        workflow = get_object_or_404(Workflow, id=workflow_id)
+        serializer = WorkflowSettingsSerializer(workflow, data=request.data, partial=True)
         
-        if request.method == 'GET':
-            serializer = self.get_serializer(workflow)
+        if serializer.is_valid():
+            serializer.save()
             return Response(serializer.data)
         
-        elif request.method == 'PATCH':
-            serializer = self.get_serializer(workflow, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
