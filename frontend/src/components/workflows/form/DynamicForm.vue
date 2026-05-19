@@ -40,8 +40,8 @@ function onSubmit(name) {
   emit('submit', formData)
 }
 
-const FILE_TYPES = new Set(['local_file', 'hdfs_file'])
-const FOLDER_TYPES = new Set(['local_folder', 'hdfs_folder'])
+const FILE_TYPES = new Set(['local_file', 'hdfs_file', 'file'])
+const FOLDER_TYPES = new Set(['local_folder', 'hdfs_folder', 'folder'])
 const TEXT_TYPES = new Set(['text', 'number', 'string'])
 </script>
 

@@ -29,7 +29,7 @@ onMounted(async () => {
 })
 
 const inputParams = () =>
-  (workflow.value?.parameters ?? []).filter((p) => p.direction === 'input' || !p.direction)
+  (workflow.value?.parameters ?? []).filter((p) => p.is_input || p.direction === 'input' || !p.direction)
 
 async function handleSubmit(formData) {
   error.value = ''
