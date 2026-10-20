@@ -80,6 +80,17 @@ class RegistryInstallTest(TempHomeMixin, TestCase):
         self.assertEqual(self.settings_on_disk()['apps'][0]['path'], str(outside.resolve()))
         self.assertEqual(wf.app_location, str(outside.resolve()))
 
+    def test_install_does_not_follow_a_symlinked_cloudgene_yaml(self):
+        app = self.home / 'apps' / 'linked'
+        app.mkdir()
+        target = self._tmp / 'elsewhere' / 'definition.yaml'
+        target.parent.mkdir()
+        shutil.copy(FIXTURES / 'other' / 'cloudgene.yaml', target)
+        (app / 'cloudgene.yaml').symlink_to(target)
+        wf = registry.install(str(app))
+        self.assertEqual(self.settings_on_disk()['apps'][0]['path'], 'linked')
+        self.assertEqual(wf.app_location, str(app))
+
     def test_install_with_copy(self):
         outside = self._tmp / 'src'
         shutil.copytree(FIXTURES / 'hello', outside)

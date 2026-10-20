@@ -29,6 +29,7 @@ through the one adapter :func:`load_definition`.
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import threading
 from dataclasses import dataclass, field
@@ -166,13 +167,19 @@ def _fallback_id(path: str) -> str:
 
 
 def _stored_path(yaml_path: Path) -> str:
-    """What to write into apps[].path: relative to apps/ when inside it, else absolute."""
-    yaml_path = yaml_path.resolve()
-    try:
-        rel = yaml_path.parent.relative_to(config.apps_dir().resolve())
+    """What to write into apps[].path: relative to apps/ when inside it, else absolute.
+
+    Symlinks are deliberately not followed: the app directory is the one containing the
+    (possibly symlinked) cloudgene.yaml, which is where main.nf and the other scripts live.
+    """
+    yaml_path = Path(os.path.abspath(yaml_path))
+    for apps_root in (config.apps_dir().absolute(), config.apps_dir().resolve()):
+        try:
+            rel = yaml_path.parent.relative_to(apps_root)
+        except ValueError:
+            continue
         return str(rel) if str(rel) != '.' else yaml_path.name
-    except ValueError:
-        return str(yaml_path.parent if yaml_path.name in YAML_NAMES else yaml_path)
+    return str(yaml_path.parent if yaml_path.name in YAML_NAMES else yaml_path)
 
 
 # --------------------------------------------------------------------------------------
