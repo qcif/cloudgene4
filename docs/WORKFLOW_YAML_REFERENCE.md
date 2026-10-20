@@ -104,7 +104,7 @@ Both step types accept `stdout: true|false` and `stderr: true|false` (default `f
 
 A step without `type` and without `cmd`/`exec` is a Nextflow step; without `script` it runs the
 app's `main.nf`. `$name` / `${name}` in string values of `params` are substituted (see
-*Variables* below), e.g. `trace_file: ${CLOUDGENE_WORKSPACE_HOME}/${CLOUDGENE_JOB_ID}/logs/step1-trace.csv`;
+*Variables* below), e.g. `trace_file: ${CLOUDGENE_TRACE_FILE}`;
 values without a variable (such as `./tmp`) are passed through untouched. `stdout: true` (or
 `stderr: true`; Nextflow's two streams are merged) adds the tail of Nextflow's output to the
 failure message of a failed step, as in Cloudgene 3. `::message::` annotations are authored for users
@@ -162,7 +162,10 @@ folder/file `name` (e.g. `$outdir` — is where Nextflow published to, so a late
 `_USER_NAME`, `_USER_EMAIL`, `_USER_FULL_NAME`, `_APP_ID`, `_APP_NAME`, `_APP_VERSION`,
 `_APP_LOCATION`, `_SERVICE_NAME`, `_SERVICE_URL`, `_SMTP_*`, `_WORKSPACE_TYPE` (`local`) and
 `_WORKSPACE_HOME` (the jobs root: `${CLOUDGENE_WORKSPACE_HOME}/${CLOUDGENE_JOB_ID}` is the job
-workspace). Names are `[A-Za-z_][A-Za-z0-9_]*`; substitution is a single pass (a value is never
+workspace). Nextflow `params` additionally get `CLOUDGENE_TRACE_FILE`: the absolute path of the
+step's trace file (`logs/trace.txt`, `logs/step<N>-trace.txt` for later steps). Cloudgene passes
+`-with-trace`, which overrides any `trace.file` in the app's config, so a pipeline that reads its
+own trace must take the path from this variable. Names are `[A-Za-z_][A-Za-z0-9_]*`; substitution is a single pass (a value is never
 re-scanned). **Unknown names are left as written** (`$HOME`, `${x:-y}`, `$1`) — Cloudgene 3
 would abort the job with a Groovy error instead; leaving them lets a `bash: true` command use
 ordinary shell variables.

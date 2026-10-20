@@ -17,7 +17,7 @@ workflow:
         taxdb: /mnt/nvme/refdata/taxdump/taxdump
         ncbi_user_email: ${CLOUDGENE_USER_EMAIL}
         analyst_name: ${CLOUDGENE_USER_FULL_NAME}
-        trace_file: ${CLOUDGENE_WORKSPACE_HOME}/${CLOUDGENE_JOB_ID}/logs/step1-trace.csv
+        trace_file: ${CLOUDGENE_TRACE_FILE}
         temp_root_dir: ./tmp
       stdout: true
       stderr: true

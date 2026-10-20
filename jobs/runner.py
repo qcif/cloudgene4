@@ -239,13 +239,15 @@ def prepare_step(job, definition: WorkflowDefinition, index: int, *, binary: str
             env['PATH'] = bin_dir + os.pathsep + path if path else bin_dir
 
     prefix = step_prefix(index)
+    # -with-trace overrides the app's own trace.file, so expose the real path to params
+    trace = logs / f'{prefix}trace.txt'
+    variables['CLOUDGENE_TRACE_FILE'] = str(trace.resolve())
     params_path = job_dir / f'{prefix}params.json'
     params = build_params(definition, step, job.parameters or {}, job_dir, variables)
     params_path.write_text(json.dumps(params, indent=2, ensure_ascii=False), encoding='utf-8')
     cg_config = job_dir / 'cloudgene.config'
     cg_config.write_text(CLOUDGENE_CONFIG, encoding='utf-8')
 
-    trace = logs / f'{prefix}trace.txt'
     log_path = logs / f'{prefix}nextflow.log'
     cmd = [binary or 'nextflow', '-log', str(log_path), 'run', resolve_script(step, app_dir)]
     if step.revision:

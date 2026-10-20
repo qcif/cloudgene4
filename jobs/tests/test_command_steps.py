@@ -124,7 +124,7 @@ workflow:
     - name: Pipeline
       params:
         fake_tasks: 1
-        trace_file: ${CLOUDGENE_WORKSPACE_HOME}/${CLOUDGENE_JOB_ID}/logs/step1-trace.csv
+        trace_file: ${CLOUDGENE_TRACE_FILE}
         who: ${CLOUDGENE_USER_EMAIL} / ${CLOUDGENE_USER_FULL_NAME}
         tmp: ./tmp
         title_copy: $title
@@ -187,7 +187,7 @@ class CommandStepWorkerTest(WorkerTestBase):
 
         # Nextflow params: variables substituted, relative values untouched
         inv = json.loads((workspace / 'work' / 'invocation.json').read_text())
-        self.assertEqual(inv['params']['trace_file'], f'{workspace.parent}/{job.id}/logs/step1-trace.csv')
+        self.assertEqual(inv['params']['trace_file'], str((workspace / 'logs' / 'trace.txt').resolve()))
         self.assertEqual(inv['params']['who'], 'alice@example.com / Alice Tester')
         self.assertEqual(inv['params']['tmp'], './tmp')
         self.assertEqual(inv['params']['title_copy'], 'hello world')
