@@ -235,11 +235,15 @@ class Execution:
 
         wf = self.job.workflow
         binary = runner.resolve_binary(cloudgene_config.get('nextflow.binary', 'nextflow'))
-        prepared = runner.prepare_step(
-            self.job, self.definition, index, binary=binary,
-            profile=workflow_bridge.nextflow_profile(wf),
-            work_dir=workflow_bridge.nextflow_work_dir(wf), app_dir=self.app_dir,
-        )
+        try:
+            prepared = runner.prepare_step(
+                self.job, self.definition, index, binary=binary,
+                profile=workflow_bridge.nextflow_profile(wf),
+                work_dir=workflow_bridge.nextflow_work_dir(wf), app_dir=self.app_dir,
+            )
+        except ValueError as exc:
+            self._finish(JobState.FAILED, f'Step "{step.name}" could not be prepared: {exc}')
+            return
         total = len(self.definition.steps)
         self._log(f'Step {index + 1}/{total}: {step.name}')
         self._log('$ ' + shlex.join(prepared.command))
@@ -266,6 +270,11 @@ class Execution:
                 prepared.command, cwd=prepared.cwd, env=prepared.env, stdin=subprocess.DEVNULL,
                 stdout=out, stderr=subprocess.STDOUT, start_new_session=True,
             )
+        except FileNotFoundError as exc:
+            self._finish(JobState.FAILED, (
+                f'Could not find Nextflow ({prepared.command[0]}) on PATH: {exc}. '
+                'Set nextflow.binary to an absolute path in Admin > Settings.'))
+            return
         except OSError as exc:
             self._finish(JobState.FAILED, f'Could not start Nextflow ({prepared.command[0]}): {exc}')
             return

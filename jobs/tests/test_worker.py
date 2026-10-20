@@ -175,7 +175,7 @@ class WorkerFailureTest(WorkerTestBase):
         self.worker.drain(timeout=10, tick_seconds=0.05)
         job.refresh_from_db()
         self.assertEqual(job.status, JobState.FAILED)
-        self.assertIn('Could not start Nextflow', job.error_message)
+        self.assertIn('Could not find Nextflow', job.error_message)
 
     def test_invalid_snapshot(self):
         make_app('hello')

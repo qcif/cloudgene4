@@ -24,6 +24,11 @@ from workflows.definition import Step, WorkflowDefinition
 
 from . import stepvars
 
+# Searched (after PATH) for the Nextflow binary: the worker is often launched from an IDE/service
+# environment that lacks the user's interactive-shell PATH additions.
+NEXTFLOW_FALLBACK_DIRS = (str(Path.home() / '.local' / 'bin'), '/usr/local/bin')
+REMOTE_URI_RE = re.compile(r'^[a-z][a-z0-9+.-]*://', re.IGNORECASE)
+
 TRACE_FIELDS = ('task_id,hash,native_id,process,tag,name,status,exit,workdir,'
                 'submit,start,complete,duration,realtime')
 
@@ -106,7 +111,14 @@ def resolve_script(step: Step, app_dir: Path) -> str:
     candidate = Path(script) if os.path.isabs(script) else app_dir / script
     if candidate.exists():
         return str(candidate.resolve())
+    if is_local_script(script):
+        raise ValueError(f'Workflow script "{script}" not found in app directory {app_dir}')
     return script
+
+
+def is_local_script(script: str) -> bool:
+    """A file path (``main.nf``, ``./x``, ``/abs``) rather than a remote pipeline (``org/repo``)."""
+    return script.endswith('.nf') or os.path.isabs(script) or script.startswith('.')
 
 
 def _expand(value: str, env: dict) -> str:
@@ -143,7 +155,14 @@ def cloudgene_variables(job, definition: WorkflowDefinition, app_dir: Path) -> d
     return {k: str(v) for k, v in values.items()}
 
 
-def work_dir_for(job, configured: str) -> Path:
+def is_remote_uri(value: str) -> bool:
+    return bool(REMOTE_URI_RE.match(value or ''))
+
+
+def work_dir_for(job, configured: str) -> Path | str:
+    """Local ``Path``, or a plain string for a remote URI work dir (``az://``, ``s3://``, ...)."""
+    if is_remote_uri(configured):
+        return f"{configured.rstrip('/')}/{job.id}"
     if configured:
         base = Path(configured)
         if not base.is_absolute():
@@ -211,7 +230,13 @@ def prepare_step(job, definition: WorkflowDefinition, index: int, *, binary: str
     env = build_env(job, definition, app_dir)
     variables = stepvars.build_variables(definition, job.parameters or {}, job_dir, env)
     work = work_dir_for(job, work_dir)
-    work.mkdir(parents=True, exist_ok=True)
+    if isinstance(work, Path):
+        work.mkdir(parents=True, exist_ok=True)
+    if os.path.isabs(binary or ''):
+        bin_dir = os.path.dirname(binary)
+        path = env.get('PATH', '')
+        if bin_dir not in path.split(os.pathsep):
+            env['PATH'] = bin_dir + os.pathsep + path if path else bin_dir
 
     prefix = step_prefix(index)
     params_path = job_dir / f'{prefix}params.json'
@@ -248,4 +273,7 @@ def resolve_binary(configured: str) -> str:
     configured = (configured or 'nextflow').strip() or 'nextflow'
     if os.path.sep in configured:
         return configured
-    return shutil.which(configured) or shutil.which(configured, path='/usr/local/bin') or configured
+    found = shutil.which(configured)
+    for directory in NEXTFLOW_FALLBACK_DIRS:
+        found = found or shutil.which(configured, path=directory)
+    return found or configured
