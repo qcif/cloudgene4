@@ -44,6 +44,10 @@ import yaml
 logger = logging.getLogger(__name__)
 
 SLUG_RE = re.compile(r'^[a-z0-9][a-z0-9_-]{0,63}$')
+# nextflow.env value: a quoted string (anything may follow, e.g. a comment) or an unquoted
+# word, where - as in a shell - ``#`` starts a comment only at the start or after whitespace.
+ENV_QUOTED_VALUE_RE = re.compile(r'^(["\'])(.*?)\1')
+ENV_INLINE_COMMENT_RE = re.compile(r'(^|\s)#.*$')
 
 # --------------------------------------------------------------------------------------
 # Schema
@@ -385,7 +389,8 @@ def write_text_atomic(path: Path, text: str) -> None:
 
 
 def parse_env(text: str) -> dict[str, str]:
-    """Parse ``KEY=VALUE`` lines (``#`` comments, optional ``export``, optional quotes)."""
+    """Parse ``KEY=VALUE`` lines (``#`` comments incl. trailing ones, optional ``export``,
+    optional quotes)."""
     env = {}
     for raw in text.splitlines():
         line = raw.strip()
@@ -397,11 +402,15 @@ def parse_env(text: str) -> dict[str, str]:
         key = key.strip()
         if not sep or not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', key):
             continue
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in '"\'':
-            value = value[1:-1]
-        env[key] = value
+        env[key] = _parse_env_value(value.strip())
     return env
+
+
+def _parse_env_value(value: str) -> str:
+    quoted = ENV_QUOTED_VALUE_RE.match(value)
+    if quoted:
+        return quoted.group(2)
+    return ENV_INLINE_COMMENT_RE.sub('', value).strip()
 
 
 def read_page(slug: str) -> str | None:

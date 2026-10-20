@@ -271,3 +271,13 @@ class PathsAndPagesTest(TempHomeMixin, SimpleTestCase):
     def test_parse_env(self):
         env = config.parse_env('# c\nA=1\nexport B="two words"\n bad line\nC=\'x\'\n1X=no\n')
         self.assertEqual(env, {'A': '1', 'B': 'two words', 'C': 'x'})
+
+    def test_parse_env_trailing_comments(self):
+        env = config.parse_env(
+            "export THROTTLE_BACKEND=redis  # defaults to 'sqlite'\n"
+            'B="a # b"  # comment\n'
+            "C='x'# comment\n"
+            'URL=http://host/#anchor\n'
+            'EMPTY=  # nothing\n')
+        self.assertEqual(env, {'THROTTLE_BACKEND': 'redis', 'B': 'a # b', 'C': 'x',
+                               'URL': 'http://host/#anchor', 'EMPTY': ''})
