@@ -63,6 +63,8 @@ live, resolved by app id regardless of where the workflow's own files are.
 
 ## `settings.yaml` reference
 
+`settings.yaml` is local state, not source: it is git-ignored, and when it is missing the first load creates it from the defaults below (including the default navbar).
+
 The config service (`core/config.py`) loads, validates, defaults, caches (by file mtime/size/inode)
 and atomically writes this file. Every key below has a type, default and validation rule; an
 invalid value in a hand-edited file **never crashes the app** — that one key falls back to its
@@ -94,7 +96,7 @@ on-disk document leniently first).
 | `nextflow.binary` | string | `nextflow` | Nextflow executable (path or name on `$PATH`) |
 | `nextflow.profile` | string | `''` | Default `-profile` for all workflows (overridden per-app) |
 | `nextflow.work_dir` | string | `''` | Global Nextflow work directory; empty = `<job>/work` (overridden per-app) |
-| `navbar[]` | list | `[]` | `{title, url, icon, admin_only: false, auth_only: false}`; `url` must be an internal path (`/…`, not `//…`) or an `http(s)://` URL — anything else is a validation error |
+| `navbar[]` | list | Home, My Jobs, About | `{title, url, icon, admin_only: false, auth_only: false}`; `url` must be an internal path (`/…`, not `//…`) or an `http(s)://` URL — anything else is a validation error |
 | `apps[]` | list | `[]` | Installed workflows: `{path, enabled: true, public: false, groups: [], trust_output: false, profile: '', work_dir: ''}` — see *Installing workflows* |
 
 Unknown keys are preserved (not validated) so that in-progress features can add keys before this

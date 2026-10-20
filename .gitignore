@@ -1,5 +1,7 @@
 cloudgene3/
 *.db
+*.lock
+apps/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -43,6 +45,8 @@ venv.bak/
 *.pyc
 db.sqlite3
 db.sqlite3-journal
+db.sqlite3-shm
+db.sqlite3-wal
 
 # Local settings
 local_settings.py
@@ -128,6 +132,7 @@ yarn-error.log*
 # Cloudgene home: runtime data is never committed
 /home/jobs/
 /home/mail/
+/home/config/settings.yaml
 /home/config/secret_key
 /home/config/.settings.lock
 /home/config/.*.tmp

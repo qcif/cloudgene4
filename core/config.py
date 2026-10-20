@@ -49,6 +49,15 @@ SLUG_RE = re.compile(r'^[a-z0-9][a-z0-9_-]{0,63}$')
 ENV_QUOTED_VALUE_RE = re.compile(r'^(["\'])(.*?)\1')
 ENV_INLINE_COMMENT_RE = re.compile(r'(^|\s)#.*$')
 
+# Navbar written to a freshly created settings.yaml (and used when ``navbar`` is omitted).
+DEFAULT_NAVBAR = [
+    {'title': 'Home', 'url': '/', 'icon': 'home', 'admin_only': False, 'auth_only': False},
+    {'title': 'My Jobs', 'url': '/jobs', 'icon': 'tasks', 'admin_only': False,
+     'auth_only': True},
+    {'title': 'About', 'url': '/pages/about', 'icon': 'info-circle', 'admin_only': False,
+     'auth_only': False},
+]
+
 # --------------------------------------------------------------------------------------
 # Schema
 # --------------------------------------------------------------------------------------
@@ -181,7 +190,7 @@ SCHEMA: dict[str, Any] = {
         'icon': Field(str, ''),
         'admin_only': Field(bool, False),
         'auth_only': Field(bool, False),
-    }, required=('title', 'url')),
+    }, default=DEFAULT_NAVBAR, required=('title', 'url')),
     'apps': ListOf({
         'path': Field(str, '', help='App dir or cloudgene.yaml; relative to CLOUDGENE_HOME/apps'),
         'enabled': Field(bool, True),
@@ -477,6 +486,21 @@ def _read_yaml_lenient(path: Path) -> tuple[dict, dict[str, list[str]]]:
         return {}, exc.errors
 
 
+def _seed_settings(path: Path) -> None:
+    """Create a missing settings.yaml from the defaults (navbar included).
+
+    Best effort: a read-only home just keeps running on in-memory defaults. Never called
+    while holding ``_cache_lock`` (``_file_lock`` is always taken first).
+    """
+    try:
+        with _file_lock():
+            if not path.exists():
+                write_text_atomic(path, _dump(default_settings()))
+                logger.info('Created %s with default settings', path)
+    except OSError as exc:
+        logger.warning('Could not create %s: %s', path, exc)
+
+
 def load_settings(force: bool = False) -> dict:
     """Return the settings (a deep copy; mutate freely), defaults filled in.
 
@@ -488,6 +512,8 @@ def load_settings(force: bool = False) -> dict:
     clean.
     """
     path = settings_path()
+    if not path.exists():
+        _seed_settings(path)
     stamp = _stamp(path)
     with _cache_lock:
         if (not force and _cache['data'] is not None and _cache['path'] == str(path)

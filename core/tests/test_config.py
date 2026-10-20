@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import time
 from pathlib import Path
+from unittest import mock
 
 import yaml
 from django.conf import settings
@@ -281,3 +282,31 @@ class PathsAndPagesTest(TempHomeMixin, SimpleTestCase):
             'EMPTY=  # nothing\n')
         self.assertEqual(env, {'THROTTLE_BACKEND': 'redis', 'B': 'a # b', 'C': 'x',
                                'URL': 'http://host/#anchor', 'EMPTY': ''})
+
+
+class SeedSettingsTest(TempHomeMixin, SimpleTestCase):
+    def test_missing_settings_file_is_created_with_defaults(self):
+        self.assertFalse(config.settings_path().exists())
+        settings = config.load_settings()
+        self.assertTrue(config.settings_path().is_file())
+        self.assertEqual([i['title'] for i in settings['navbar']], ['Home', 'My Jobs', 'About'])
+        self.assertEqual(settings, config.default_settings())
+        config.clear_cache()
+        self.assertEqual(config.load_settings(), settings)
+        self.assertTrue(config.config_status()['ok'])
+
+    def test_existing_settings_file_is_not_overwritten(self):
+        self.write_yaml({'server': {'name': 'Mine'}, 'navbar': []})
+        settings = config.load_settings()
+        self.assertEqual(settings['server']['name'], 'Mine')
+        self.assertEqual(settings['navbar'], [])
+
+    def test_omitted_navbar_gets_the_default_entries(self):
+        self.write_yaml({'server': {'name': 'Mine'}})
+        self.assertEqual(len(config.load_settings()['navbar']), 3)
+
+    def test_unwritable_home_falls_back_to_in_memory_defaults(self):
+        with mock.patch.object(config, 'write_text_atomic', side_effect=PermissionError('ro')):
+            settings = config.load_settings()
+        self.assertEqual(settings, config.default_settings())
+        self.assertFalse(config.settings_path().exists())
