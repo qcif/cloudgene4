@@ -24,7 +24,7 @@ const fieldErrors = ref({})
 
 const allGroups = ref([])
 const newGroup = ref('')
-const access = reactive({ enabled: true, public: false, groups: [] })
+const access = reactive({ enabled: true, public: false, trust_output: false, groups: [] })
 const nf = reactive({ profile: '', work_dir: '', config: '', env: '' })
 const nfMeta = reactive({ config_path: '', env_path: '', variables: [] })
 
@@ -36,7 +36,12 @@ const groupChoices = computed(() => {
 
 function applyWorkflow(data) {
   wf.value = data
-  Object.assign(access, { enabled: data.enabled, public: data.public, groups: [...data.groups] })
+  Object.assign(access, {
+    enabled: data.enabled,
+    public: data.public,
+    trust_output: !!data.trust_output,
+    groups: [...data.groups],
+  })
 }
 
 function applyNextflow(data) {
@@ -150,6 +155,14 @@ async function reload() {
           <div class="form-check form-switch mb-3">
             <input id="wf-public" v-model="access.public" type="checkbox" class="form-check-input" data-testid="workflow-public" />
             <label class="form-check-label" for="wf-public">Public — every user (and anonymous visitors in the list) can see it</label>
+          </div>
+          <div class="form-check form-switch mb-3">
+            <input id="wf-trust-output" v-model="access.trust_output" type="checkbox" class="form-check-input" data-testid="workflow-trust-output" />
+            <label class="form-check-label" for="wf-trust-output">Trust workflow output — open HTML reports in the browser instead of downloading them</label>
+            <div class="form-text">
+              Reports run in a sandbox with scripts enabled but no access to this site's login or API.
+              Only enable for workflows whose output you trust.
+            </div>
           </div>
           <div class="mb-1 fw-semibold small">Groups allowed to run it <span class="text-muted fw-normal">(admins always can)</span></div>
           <div v-for="g in groupChoices" :key="g" class="form-check form-check-inline">

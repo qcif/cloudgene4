@@ -63,6 +63,9 @@ class Workflow(models.Model):
     allowed_groups = models.ManyToManyField('auth.Group', blank=True, 
                                           help_text="Groups that can access this workflow")
     public = models.BooleanField(default=False, help_text="Publicly accessible to all users")
+    trust_output = models.BooleanField(
+        default=False,
+        help_text='Open HTML outputs in the browser (sandboxed, scripts allowed) — B-04 opt-in')
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)

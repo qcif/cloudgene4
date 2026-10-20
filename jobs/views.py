@@ -15,7 +15,6 @@ Admin endpoints:
     POST /api/admin/jobs/{id}/cancel/   POST /api/admin/jobs/{id}/restart/
 """
 import logging
-import mimetypes
 
 from django.db.models import F, Q
 from django.http import FileResponse, HttpResponse
@@ -33,7 +32,8 @@ from core.permissions import IsAdmin, is_admin
 
 from . import services
 from .models import Job, JobOutput, JobState
-from .outputs import read_job_log, resolve_output_file
+from .outputs import (SANDBOX_CSP, TRUSTED_SANDBOX_CSP, read_job_log, resolve_output_file,
+                      safe_content_type)
 from .serializers import (JobDetailSerializer, JobListSerializer, JobStatusSerializer,
                           JobSubmitRequestSerializer)
 from .submission import SubmissionError, submit_job
@@ -44,25 +44,15 @@ STATE_PARAM = OpenApiParameter('state', str, enum=list(JobState.ALL),
                                description='Filter by state (comma-separated list allowed)')
 
 
-# B-04: a job output must never become active content on the app's own origin. Only this
-# small allowlist may be served with its real (guessed) type, and only that allowlist may ever
-# be inline (``?inline=1``); everything else — HTML/SVG/XML/JS/unknown — is always
-# ``application/octet-stream`` + ``attachment``, regardless of ``?inline=1``.
-_INLINE_SAFE_TYPES = {'text/plain', 'application/pdf', 'image/png', 'image/jpeg', 'image/gif'}
-# application/json served as text/plain is fine (SPEC-noted exception) and avoids the browser
-# treating it as anything richer than text.
-_CONTENT_TYPE_OVERRIDES = {'application/json': 'text/plain'}
-
-
-def _output_response(path, filename, inline):
-    guessed, _ = mimetypes.guess_type(filename)
-    guessed = _CONTENT_TYPE_OVERRIDES.get(guessed, guessed)
-    safe = guessed in _INLINE_SAFE_TYPES
-    content_type = guessed if safe else 'application/octet-stream'
-    response = FileResponse(open(path, 'rb'), as_attachment=not (inline and safe),
+def _output_response(path, filename, inline, trusted=False):
+    # B-04: see jobs.outputs.safe_content_type
+    safe_type = safe_content_type(filename, trusted)
+    content_type = safe_type or 'application/octet-stream'
+    response = FileResponse(open(path, 'rb'), as_attachment=not (inline and safe_type),
                             filename=filename, content_type=content_type)
     response['X-Content-Type-Options'] = 'nosniff'
-    response['Content-Security-Policy'] = 'sandbox'
+    response['Content-Security-Policy'] = (
+        TRUSTED_SANDBOX_CSP if trusted and safe_type == 'text/html' else SANDBOX_CSP)
     return response
 
 
@@ -166,7 +156,8 @@ class JobViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Gene
             return error_response('File not found.', 'not_found', status.HTTP_404_NOT_FOUND)
         JobOutput.objects.filter(pk=output.pk).update(download_count=F('download_count') + 1)
         inline = request.query_params.get('inline') in ('1', 'true')
-        return _output_response(path, output.name, inline)
+        trusted = bool(job.workflow_id and job.workflow.trust_output)
+        return _output_response(path, output.name, inline, trusted)
 
 
 class AdminJobViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):

@@ -227,7 +227,7 @@ export const jobSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['id', 'output_id', 'label', 'name', 'path', 'size', 'download_count', 'url'],
+        required: ['id', 'output_id', 'label', 'name', 'path', 'size', 'download_count', 'url', 'view_url'],
       },
     },
   },

@@ -40,10 +40,16 @@ function displayPath(o) {
       <h5>{{ g.label }}</h5>
       <ul class="list-group">
         <li v-for="o in g.files" :key="o.id" class="list-group-item d-flex justify-content-between align-items-center">
-          <a :href="o.url" data-testid="job-output-link" :data-filename="o.path" download>
+          <a v-if="o.view_url" :href="o.view_url" target="_blank" rel="noopener"
+             data-testid="job-output-link" :data-filename="o.path">
+            <i class="fas fa-external-link-alt me-2"></i>{{ displayPath(o) }}
+          </a>
+          <a v-else :href="o.url" data-testid="job-output-link" :data-filename="o.path" download>
             <i class="fas fa-file-download me-2"></i>{{ displayPath(o) }}
           </a>
           <span class="text-muted small">
+            <a v-if="o.view_url" :href="o.url" download class="me-2" title="Download"
+               data-testid="job-output-download" :data-filename="o.path"><i class="fas fa-file-download"></i></a>
             {{ formatBytes(o.size) }}
             <span v-if="o.download_count" class="ms-2" title="Downloads"><i class="fas fa-download"></i> {{ o.download_count }}</span>
           </span>

@@ -189,6 +189,7 @@ class AppStatus:
     enabled: bool
     public: bool
     groups: list[str]
+    trust_output: bool = False
     profile: str = ''
     work_dir: str = ''
     meta: Meta | None = None
@@ -212,6 +213,7 @@ def _scan(settings: dict) -> list[AppStatus]:
                        yaml_path='', enabled=bool(entry.get('enabled', True)),
                        public=bool(entry.get('public', False)),
                        groups=list(entry.get('groups') or []),
+                       trust_output=bool(entry.get('trust_output', False)),
                        profile=entry.get('profile') or '', work_dir=entry.get('work_dir') or '')
         try:
             yaml_path = resolve_app_path(entry['path'])
@@ -284,11 +286,13 @@ def _upsert(st: AppStatus, raw: str | None):
                       description=meta.description, website=meta.website[:200],
                       category=category, yaml_config=raw or '', app_path=st.yaml_path,
                       status='enabled' if st.enabled else 'disabled', public=st.public,
-                      errors=[], installed=True, synced_at=now)
+                      trust_output=st.trust_output, errors=[], installed=True,
+                      synced_at=now)
     else:
         if row is None:
             return None  # never-valid app: shown to admins from settings, no cache row
-        values = dict(status='disabled', public=st.public, errors=st.errors, installed=True,
+        values = dict(status='disabled', public=st.public, trust_output=st.trust_output,
+                      errors=st.errors, installed=True,
                       app_path=st.yaml_path or row.app_path, synced_at=now)
     if row is None:
         row = Workflow(pk=st.id, **values)
@@ -457,13 +461,16 @@ def uninstall(app_id: str) -> None:
     logger.info('Workflow %s uninstalled', app_id)
 
 
-def update_access(app_id: str, *, enabled=None, public=None, groups=None) -> AppStatus:
+def update_access(app_id: str, *, enabled=None, public=None, groups=None,
+                  trust_output=None) -> AppStatus:
     def apply(doc):
         entry = doc['apps'][_entry_index(doc, app_id)]
         if enabled is not None:
             entry['enabled'] = bool(enabled)
         if public is not None:
             entry['public'] = bool(public)
+        if trust_output is not None:
+            entry['trust_output'] = bool(trust_output)
         if groups is not None:
             entry['groups'] = sorted({str(g).strip() for g in groups if str(g).strip()})
 
@@ -471,8 +478,8 @@ def update_access(app_id: str, *, enabled=None, public=None, groups=None) -> App
         _ensure_groups(str(g).strip() for g in groups)
     config.update_settings(apply)
     sync_all()
-    logger.info('Workflow %s access updated (enabled=%s public=%s groups=%s)',
-                app_id, enabled, public, groups)
+    logger.info('Workflow %s access updated (enabled=%s public=%s groups=%s '
+                'trust_output=%s)', app_id, enabled, public, groups, trust_output)
     return get_status(app_id)
 
 

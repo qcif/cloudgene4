@@ -95,7 +95,7 @@ on-disk document leniently first).
 | `nextflow.profile` | string | `''` | Default `-profile` for all workflows (overridden per-app) |
 | `nextflow.work_dir` | string | `''` | Global Nextflow work directory; empty = `<job>/work` (overridden per-app) |
 | `navbar[]` | list | `[]` | `{title, url, icon, admin_only: false, auth_only: false}`; `url` must be an internal path (`/…`, not `//…`) or an `http(s)://` URL — anything else is a validation error |
-| `apps[]` | list | `[]` | Installed workflows: `{path, enabled: true, public: false, groups: [], profile: '', work_dir: ''}` — see *Installing workflows* |
+| `apps[]` | list | `[]` | Installed workflows: `{path, enabled: true, public: false, groups: [], trust_output: false, profile: '', work_dir: ''}` — see *Installing workflows* |
 
 Unknown keys are preserved (not validated) so that in-progress features can add keys before this
 table is updated.
@@ -271,6 +271,11 @@ See `plans/SPEC.md` §3.3 for the full contract; the operationally relevant poin
   `application/octet-stream` with `Content-Disposition: attachment`, regardless of `?inline=1`,
   plus `X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox` on every response.
   This means a malicious pipeline output can never execute as a page on the app's own origin.
+  *Exception:* enable **Trust workflow output** (`apps[].trust_output`, default off) in a
+  workflow's admin settings and its `.html` outputs open in a new tab. They are still sandboxed
+  (`Content-Security-Policy: sandbox allow-scripts …`, no `allow-same-origin`): scripts in
+  e.g. a MultiQC report run, but cannot read the user's session or call the API. SVG/XML/JS
+  remain download-only. Only enable this for workflows whose output you trust.
 - No admin interface (SPA or `/django-admin/`) ever displays a user's API token key in cleartext;
   it is shown once, at creation time, by `POST /api/me/token`.
 

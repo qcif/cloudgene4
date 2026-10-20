@@ -6,7 +6,7 @@ truth is settings.yaml ``apps[]`` (+ per-app files under ``$CLOUDGENE_HOME/apps/
     POST   /api/admin/workflows/install/         {path, enabled?, public?, groups?, copy?}
     POST   /api/admin/workflows/sync/            re-read every app
     GET    /api/admin/workflows/{id}/            one app (+ raw yaml)
-    PATCH  /api/admin/workflows/{id}/            {enabled?, public?, groups?}
+    PATCH  /api/admin/workflows/{id}/            {enabled?, public?, groups?, trust_output?}
     DELETE /api/admin/workflows/{id}/            uninstall (files stay on disk)
     POST   /api/admin/workflows/{id}/reload/     re-read cloudgene.yaml
     GET/PUT /api/admin/workflows/{id}/nextflow/  {profile, work_dir, config, env}
@@ -43,6 +43,8 @@ class AdminWorkflowSerializer(serializers.Serializer):
                   'broken app is never effectively enabled even if apps[].enabled is true')
     public = serializers.BooleanField()
     groups = serializers.ListField(child=serializers.CharField())
+    trust_output = serializers.BooleanField(
+        help_text='Trust this workflow\'s output: HTML outputs open in the browser (sandboxed)')
     valid = serializers.BooleanField()
     errors = serializers.ListField(child=serializers.CharField())
     warnings = serializers.ListField(child=serializers.CharField())
@@ -56,6 +58,7 @@ class AdminWorkflowDetailSerializer(AdminWorkflowSerializer):
 class AdminWorkflowPatchSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False)
     public = serializers.BooleanField(required=False)
+    trust_output = serializers.BooleanField(required=False)
     groups = serializers.ListField(child=serializers.CharField(max_length=150), required=False,
                                    help_text='Group names (created if missing)')
 
@@ -118,6 +121,7 @@ def _row(st: registry.AppStatus, job_counts=None, with_yaml=False) -> dict:
         'effective_status': 'enabled' if (st.enabled and st.valid) else 'disabled',
         'public': st.public,
         'groups': st.groups,
+        'trust_output': st.trust_output,
         'valid': st.valid,
         'errors': st.errors,
         'warnings': st.warnings,

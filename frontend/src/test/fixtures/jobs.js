@@ -83,7 +83,7 @@ export const jobDetailFixture = {
   outputs_count: 1,
   inputs: [{ id: 'message', label: 'Message', type: 'text', value: 'hi', files: [] }],
   outputs: [
-    { id: 11, output_id: 'outdir', label: 'Output folder', name: 'hello.txt', path: 'outdir/hello.txt', size: 3, download_count: 0, url: `/api/jobs/${base.id}/outputs/11/` },
+    { id: 11, output_id: 'outdir', label: 'Output folder', name: 'hello.txt', path: 'outdir/hello.txt', size: 3, download_count: 0, url: `/api/jobs/${base.id}/outputs/11/`, view_url: `/api/jobs/${base.id}/outputs/11/?inline=1` },
   ],
   log_url: `/api/jobs/${base.id}/log/`,
 }

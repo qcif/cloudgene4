@@ -2155,6 +2155,10 @@ components:
           type: array
           items:
             type: string
+        trust_output:
+          type: boolean
+          description: 'Trust this workflow''s output: HTML outputs open in the browser
+            (sandboxed)'
         valid:
           type: boolean
         errors:
@@ -2180,6 +2184,7 @@ components:
       - name
       - path
       - public
+      - trust_output
       - valid
       - version
       - warnings
@@ -2223,6 +2228,10 @@ components:
           type: array
           items:
             type: string
+        trust_output:
+          type: boolean
+          description: 'Trust this workflow''s output: HTML outputs open in the browser
+            (sandboxed)'
         valid:
           type: boolean
         errors:
@@ -2251,6 +2260,7 @@ components:
       - name
       - path
       - public
+      - trust_output
       - valid
       - version
       - warnings
@@ -2880,6 +2890,12 @@ components:
         url:
           type: string
           readOnly: true
+        view_url:
+          type: string
+          nullable: true
+          readOnly: true
+          description: Inline (open-in-browser) URL; null for types that are download-only
+            (B-04)
       required:
       - download_count
       - id
@@ -2889,6 +2905,7 @@ components:
       - path
       - size
       - url
+      - view_url
     JobStatus:
       type: object
       description: Light payload polled by the job page every 2 s while the job is
@@ -3527,6 +3544,8 @@ components:
         enabled:
           type: boolean
         public:
+          type: boolean
+        trust_output:
           type: boolean
         groups:
           type: array

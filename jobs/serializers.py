@@ -9,6 +9,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import Job, JobMessage, JobOutput, JobState, JobStep
+from .outputs import safe_content_type
 
 
 class ProcessProgressSerializer(serializers.Serializer):
@@ -43,14 +44,23 @@ class JobMessageSerializer(serializers.ModelSerializer):
 class JobOutputSerializer(serializers.ModelSerializer):
     name = serializers.CharField()
     url = serializers.SerializerMethodField()
+    view_url = serializers.SerializerMethodField(
+        help_text='Inline (open-in-browser) URL; null for types that are download-only (B-04)')
 
     class Meta:
         model = JobOutput
-        fields = ['id', 'output_id', 'label', 'name', 'path', 'size', 'download_count', 'url']
+        fields = ['id', 'output_id', 'label', 'name', 'path', 'size', 'download_count', 'url',
+                  'view_url']
         read_only_fields = fields
 
     def get_url(self, obj) -> str:
         return reverse('job-output-download', kwargs={'pk': str(obj.job_id), 'file_id': obj.id})
+
+    def get_view_url(self, obj) -> str | None:
+        trusted = bool(obj.job.workflow_id and obj.job.workflow.trust_output)
+        if safe_content_type(obj.name, trusted) is None:
+            return None
+        return f'{self.get_url(obj)}?inline=1'
 
 
 class JobInputSerializer(serializers.Serializer):

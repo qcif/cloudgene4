@@ -17,6 +17,7 @@ from jobs.models import Job, JobMessage, JobOutput, JobState, JobStep
 from jobs.submission import safe_filename
 from jobs.worker import Worker
 from workflows import registry
+from workflows.models import Workflow
 
 from .helpers import TempHomeMixin, install_fake_nextflow, make_app, make_user
 
@@ -481,6 +482,50 @@ class OutputDownloadContentTypeTest(ApiTestBase):
         self.assertEqual(r['Content-Type'], 'image/png')
         self.assertIn('inline', r['Content-Disposition'])
         self.assert_common_headers(r)
+
+    def seed_workflow_output(self, filename, content=b'<p>hi</p>', trusted=True):
+        job, output = self.seed_output(filename, content)
+        wf = Workflow.objects.create(id='trusty', name='Trusty', trust_output=trusted)
+        Job.objects.filter(pk=job.pk).update(workflow=wf)
+        return Job.objects.get(pk=job.pk), output
+
+    def test_trusted_workflow_html_is_inline_in_script_sandbox(self):
+        job, output = self.seed_workflow_output('report.html')
+        r = self.get(job, output, inline=True)
+        self.assertTrue(r['Content-Type'].startswith('text/html'))
+        self.assertIn('inline', r['Content-Disposition'])
+        csp = r['Content-Security-Policy']
+        self.assertIn('allow-scripts', csp)
+        self.assertNotIn('allow-same-origin', csp)
+        self.assertEqual(r['X-Content-Type-Options'], 'nosniff')
+        # without ?inline=1 it is still a download
+        self.assertIn('attachment', self.get(job, output)['Content-Disposition'])
+        detail = self.as_user(self.alice).get(f'/api/jobs/{job.id}/').json()
+        self.assertTrue(detail['outputs'][0]['view_url'])
+
+    def test_untrusted_workflow_html_stays_download_only(self):
+        job, output = self.seed_workflow_output('report.html', trusted=False)
+        r = self.get(job, output, inline=True)
+        self.assertEqual(r['Content-Type'], 'application/octet-stream')
+        self.assertEqual(r['Content-Security-Policy'], 'sandbox')
+        detail = self.as_user(self.alice).get(f'/api/jobs/{job.id}/').json()
+        self.assertIsNone(detail['outputs'][0]['view_url'])
+
+    def test_trusted_workflow_does_not_unlock_svg(self):
+        job, output = self.seed_workflow_output('image.svg', b'<svg onload="x()"></svg>')
+        r = self.get(job, output, inline=True)
+        self.assertEqual(r['Content-Type'], 'application/octet-stream')
+        self.assertIn('attachment', r['Content-Disposition'])
+
+    def test_view_url_only_for_inline_safe_types(self):
+        expected = {'notes.txt': True, 'data.json': True, 'report.html': False,
+                    'image.svg': False, 'archive.zip': False}
+        for filename, viewable in expected.items():
+            job, output = self.seed_output(filename)
+            detail = self.as_user(self.alice).get(f'/api/jobs/{job.id}/').json()
+            (row,) = detail['outputs']
+            url = f'/api/jobs/{job.id}/outputs/{output.id}/'
+            self.assertEqual(row['view_url'], f'{url}?inline=1' if viewable else None, filename)
 
 
 class AdminJobsApiTest(ApiTestBase):

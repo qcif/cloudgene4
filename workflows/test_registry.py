@@ -70,7 +70,7 @@ class RegistryInstallTest(TempHomeMixin, TestCase):
         # stored relative to apps/ in settings.yaml (source of truth)
         apps = self.settings_on_disk()['apps']
         self.assertEqual(apps, [{'path': 'hello', 'enabled': True, 'public': True,
-                                 'groups': ['lab'], 'profile': '', 'work_dir': ''}])
+                                 'groups': ['lab'], 'trust_output': False, 'profile': '', 'work_dir': ''}])
 
     def test_install_yaml_file_outside_apps_is_referenced_absolute(self):
         outside = self._tmp / 'elsewhere' / 'other'
@@ -246,6 +246,14 @@ class RegistryAccessTest(TempHomeMixin, TestCase):
         wf = Workflow.objects.get(pk='hello')
         self.assertEqual(wf.status, 'disabled')
         self.assertTrue(wf.public)
+
+    def test_trust_output_defaults_false_and_round_trips(self):
+        self.assertFalse(Workflow.objects.get(pk='hello').trust_output)
+        registry.update_access('hello', trust_output=True)
+        self.assertTrue(self.settings_on_disk()['apps'][0]['trust_output'])
+        self.assertTrue(Workflow.objects.get(pk='hello').trust_output)
+        registry.update_access('hello', trust_output=False)
+        self.assertFalse(Workflow.objects.get(pk='hello').trust_output)
 
     def test_nextflow_settings_round_trip(self):
         registry.set_nextflow_settings('hello', profile='docker', work_dir='/scratch/w',

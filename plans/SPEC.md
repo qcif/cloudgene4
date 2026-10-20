@@ -645,6 +645,11 @@ scope. Slice owners may refine paths but must update this section.
   `application/octet-stream` with `Content-Disposition: attachment`, regardless of `?inline=1`.
   Every response also carries `X-Content-Type-Options: nosniff` and
   `Content-Security-Policy: sandbox`.
+  **Opt-in exception:** a workflow with `apps[].trust_output: true` (default false; admin
+  workflow settings → "Trust workflow output") may additionally have `text/html` outputs shown
+  `inline`, but only with `Content-Security-Policy: sandbox allow-scripts allow-popups
+  allow-downloads` (no `allow-same-origin`, so the page runs in an opaque origin with no access
+  to the app's cookies, storage or API). SVG/XML/JS stay download-only.
 - `GET /api/admin/jobs` (admin only) lists **all** users' jobs with `?state=&user=<id|username>&
   workflow=<id>&search=<name|user|workflow|id prefix>`; `POST /api/admin/jobs/{id}/cancel` and
   `…/restart` return the job (restart: 409 `invalid_state`, `workspace_removed` or

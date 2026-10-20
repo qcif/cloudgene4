@@ -54,8 +54,15 @@ def test_submit_hello_with_unicode_job_name(page, login, stack, api):
     job.open_results()
     link = page.locator('[data-testid="job-output-link"][data-filename$="hello.txt"]')
     expect(link).to_be_visible()
-    with page.expect_download() as download_info:
+    # text outputs open in a new tab; the separate download icon still downloads
+    with page.context.expect_page() as popup_info:
         link.click()
+    popup = popup_info.value
+    expect(popup.locator('body')).to_contain_text(MESSAGE)
+    popup.close()
+    download_link = page.locator('[data-testid="job-output-download"][data-filename$="hello.txt"]')
+    with page.expect_download() as download_info:
+        download_link.click()
     download = download_info.value
     assert download.suggested_filename.endswith('hello.txt')
     assert Path(download.path()).read_text(encoding='utf-8') == MESSAGE + '\n'

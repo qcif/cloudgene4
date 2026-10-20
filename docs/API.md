@@ -113,6 +113,13 @@ attachment`, regardless of `?inline=1`; every response also carries `X-Content-T
 nosniff` and `Content-Security-Policy: sandbox`. A pipeline output can never be used to run script
 content on the application's own origin.
 
+Each entry in a job's `outputs` carries `view_url` (the `?inline=1` URL) for those allowlisted
+types and `null` otherwise; the web UI opens viewable outputs in a new tab and downloads the rest.
+
+Workflows with `trust_output` enabled (admin `PATCH /api/admin/workflows/{id}/`, default
+`false`) additionally get `view_url` for `.html` outputs, served inline with `Content-Security-
+Policy: sandbox allow-scripts allow-popups allow-downloads` — never `allow-same-origin`.
+
 ## Health check
 
 `GET /api/health` (no auth) is meant for a load balancer / uptime check: `200` unless the database

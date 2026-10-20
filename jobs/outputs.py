@@ -3,6 +3,7 @@ Job outputs: collection into ``JobOutput`` rows and safe resolution for download
 """
 from __future__ import annotations
 
+import mimetypes
 import os
 from pathlib import Path, PurePosixPath
 
@@ -13,6 +14,32 @@ from .models import Job, JobOutput
 
 MAX_FILES_PER_OUTPUT = 5000
 LOG_TAIL_BYTES = 256 * 1024
+
+# B-04: a job output must never become active content on the app's own origin. Only this
+# small allowlist may be served with its real (guessed) type, and only that allowlist may ever
+# be inline (``?inline=1``); everything else — HTML/SVG/XML/JS/unknown — is always
+# ``application/octet-stream`` + ``attachment``, regardless of ``?inline=1``.
+INLINE_SAFE_TYPES = {'text/plain', 'application/pdf', 'image/png', 'image/jpeg', 'image/gif'}
+# application/json served as text/plain is fine (SPEC-noted exception) and avoids the browser
+# treating it as anything richer than text.
+CONTENT_TYPE_OVERRIDES = {'application/json': 'text/plain'}
+
+
+# Opt-in per workflow (``trust_output``): HTML may be shown, but only inside a CSP sandbox that
+# lets scripts run without ``allow-same-origin``, i.e. in an opaque origin that cannot read the
+# app's cookies/storage or call its API as the user.
+TRUSTED_EXTRA_TYPES = {'text/html'}
+SANDBOX_CSP = 'sandbox'
+TRUSTED_SANDBOX_CSP = 'sandbox allow-scripts allow-popups allow-downloads'
+
+
+def safe_content_type(filename: str, trusted: bool = False) -> str | None:
+    """The type ``filename`` may be served (and shown inline) as, or None if it never may."""
+    guessed, _ = mimetypes.guess_type(filename)
+    guessed = CONTENT_TYPE_OVERRIDES.get(guessed, guessed)
+    if guessed in INLINE_SAFE_TYPES or (trusted and guessed in TRUSTED_EXTRA_TYPES):
+        return guessed
+    return None
 
 
 def _allowed_roots(job: Job) -> list[Path]:
@@ -29,7 +56,9 @@ def _allowed_roots(job: Job) -> list[Path]:
     roots = [cloudgene_config.job_dir(job.id).resolve()]
     configured = (workflow_bridge.nextflow_work_dir(job.workflow) if job.workflow_id
                  else (cloudgene_config.get('nextflow.work_dir', '') or '').strip())
-    roots.append(runner.work_dir_for(job, configured).resolve())
+    work = runner.work_dir_for(job, configured)
+    if isinstance(work, Path):      # a remote (URI) work dir has nothing local to publish from
+        roots.append(work.resolve())
     return roots
 
 
