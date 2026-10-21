@@ -32,6 +32,7 @@ cloudgene_admin_password: "{{ vault_cloudgene_admin_password | default(omit) }}"
 cloudgene_client_max_body_size: 1024m
 
 nextflow_version: 26.10.3
-nextflow_url: "https://github.com/nextflow-io/nextflow/releases/download/v{{ nextflow_version }}/nextflow-{{ nextflow_version }}-dist"
+# The plain launcher (not the self-contained "-dist" build) so a per-app NXF_VER is honoured.
+nextflow_url: "https://github.com/nextflow-io/nextflow/releases/download/v{{ nextflow_version }}/nextflow"
 
 cloudgene_ufw_enabled: true

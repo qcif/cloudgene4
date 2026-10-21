@@ -8,6 +8,7 @@
   ansible.builtin.get_url:
     url: "{{ nextflow_url }}"
     dest: "/usr/local/bin/nextflow-{{ nextflow_version }}"
+    force: true            # replace an earlier self-contained "-dist" download
     mode: "0755"
 
 - name: Point /usr/local/bin/nextflow at the pinned version
@@ -15,3 +16,12 @@
     src: "/usr/local/bin/nextflow-{{ nextflow_version }}"
     dest: /usr/local/bin/nextflow
     state: link
+
+- name: Download the Nextflow {{ nextflow_version }} runtime for the service user
+  ansible.builtin.command: /usr/local/bin/nextflow -version
+  become: true
+  become_user: "{{ cloudgene_user }}"
+  environment:
+    HOME: "{{ cloudgene_home }}"
+  args:
+    creates: "{{ cloudgene_home }}/.nextflow/framework/{{ nextflow_version }}"
