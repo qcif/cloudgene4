@@ -297,6 +297,71 @@ class CommandsTest(TempHomeMixin, TestCase):
                          stdout=io.StringIO())
         self.assertIn('no-such-type', str(ctx.exception))
 
+    def _ensure(self, *args):
+        out = io.StringIO()
+        call_command('ensure_workflow', *args, stdout=out)
+        return out.getvalue().strip().splitlines()[-1]
+
+    def test_ensure_workflow_is_idempotent(self):
+        hello = str(self.home / 'apps' / 'hello')
+        args = (hello, '--public', '--groups', 'b,a', '--profile', 'azure',
+                '--work-dir', 'az://c/w', '--trust-output')
+        self.assertEqual(self._ensure(*args), 'changed: hello')
+        entry = config.load_settings()['apps'][0]
+        self.assertEqual(
+            (entry['public'], entry['groups'], entry['profile'], entry['work_dir'],
+             entry['trust_output']),
+            (True, ['a', 'b'], 'azure', 'az://c/w', True))
+
+        mtime = config.settings_path().stat().st_mtime_ns
+        self.assertEqual(self._ensure(*args), 'unchanged: hello')
+        self.assertEqual(config.settings_path().stat().st_mtime_ns, mtime)
+
+    def test_ensure_workflow_updates_differences(self):
+        hello = str(self.home / 'apps' / 'hello')
+        self._ensure(hello, '--public', '--trust-output')
+        self.assertEqual(self._ensure(hello, '--profile', 'p'), 'changed: hello')
+        entry = config.load_settings()['apps'][0]
+        self.assertEqual((entry['public'], entry['profile'], entry['trust_output']),
+                         (False, 'p', False))
+        self.assertEqual(self._ensure(hello, '--profile', 'p', '--disabled'), 'changed: hello')
+        self.assertFalse(config.load_settings()['apps'][0]['enabled'])
+
+    def test_ensure_workflow_moves_path(self):
+        moved = self._tmp / 'elsewhere' / 'hello'
+        shutil.copytree(self.home / 'apps' / 'hello', moved)
+        self._ensure(str(self.home / 'apps' / 'hello'))
+        self.assertEqual(self._ensure(str(moved)), 'changed: hello')
+        self.assertEqual(config.load_settings()['apps'][0]['path'], str(moved))
+
+    def test_ensure_workflow_keeps_symlinked_yaml_app_dir(self):
+        app = self._tmp / 'deployed' / 'hello'
+        app.mkdir(parents=True)
+        (app / 'main.nf').write_text('')
+        yaml_file = self._tmp / 'configs' / 'hello.yml'
+        yaml_file.parent.mkdir()
+        shutil.copy(self.home / 'apps' / 'hello' / 'cloudgene.yaml', yaml_file)
+        (app / 'cloudgene.yml').symlink_to(yaml_file)
+        self.assertEqual(self._ensure(str(app)), 'changed: hello')
+        self.assertEqual(config.load_settings()['apps'][0]['path'], str(app))
+        self.assertEqual(self._ensure(str(app)), 'unchanged: hello')
+
+    def test_ensure_workflow_invalid(self):
+        with self.assertRaises(CommandError):
+            self._ensure(str(self.home / 'apps' / 'invalid'))
+
+    def test_uninstall_workflow_command(self):
+        self._ensure(str(self.home / 'apps' / 'hello'))
+        out = io.StringIO()
+        call_command('uninstall_workflow', 'hello', stdout=out)
+        self.assertEqual(out.getvalue().strip(), 'changed: hello')
+        self.assertEqual(config.load_settings().get('apps'), [])
+        out = io.StringIO()
+        call_command('uninstall_workflow', 'hello', '--missing-ok', stdout=out)
+        self.assertEqual(out.getvalue().strip(), 'unchanged: hello')
+        with self.assertRaises(CommandError):
+            call_command('uninstall_workflow', 'hello', stdout=io.StringIO())
+
     def test_sync_workflows_command(self):
         self.write_apps([{'path': 'hello'}, {'path': 'invalid'}])
         out = io.StringIO()
