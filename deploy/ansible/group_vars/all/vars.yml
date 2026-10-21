@@ -36,3 +36,26 @@ nextflow_version: 26.10.3
 nextflow_url: "https://github.com/nextflow-io/nextflow/releases/download/v{{ nextflow_version }}/nextflow"
 
 cloudgene_ufw_enabled: true
+
+# --- Workflows -------------------------------------------------------------------------
+# Each entry is downloaded (release zip) into cloudgene_workflows_dir/<id>/, its cloudgene.yml
+# is linked to a file in the configs repo, and it is registered with `ensure_workflow`.
+# Per-app nextflow.env / nextflow.config are NOT managed here: set them in Admin > Workflows.
+# Remove a workflow by setting `state: absent` (then delete the entry once applied).
+cloudgene_workflow_configs_repo: https://github.com/qcif/daff-cloudgene.git
+cloudgene_workflow_configs_version: main
+cloudgene_workflow_configs_dir: /opt/daff-cloudgene
+cloudgene_workflows_dir: /opt/cloudgene-workflows
+
+cloudgene_workflows:
+  - id: taxodactyl_150_azure          # must match the id in the cloudgene yml
+    state: present
+    archive_url: https://github.com/qcif/taxodactyl/archive/refs/tags/v1.5.0.zip
+    archive_root: taxodactyl-1.5.0    # top-level directory inside the zip
+    cloudgene_yml: workflows/taxodactyl-v1.5.0-azure.yml   # path within the configs repo
+    enabled: true
+    public: true
+    groups: []
+    profile: azure
+    work_dir: az://workdata/wf2
+    trust_output: true

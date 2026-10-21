@@ -1,0 +1,23 @@
+---
+- name: Check out the workflow configs repository
+  ansible.builtin.git:
+    repo: "{{ cloudgene_workflow_configs_repo }}"
+    dest: "{{ cloudgene_workflow_configs_dir }}"
+    version: "{{ cloudgene_workflow_configs_version }}"
+    force: false
+  register: workflows_configs
+
+- name: Create the workflows directory
+  ansible.builtin.file:
+    path: "{{ cloudgene_workflows_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Manage each workflow
+  ansible.builtin.include_tasks: workflow.yml
+  loop: "{{ cloudgene_workflows }}"
+  loop_control:
+    loop_var: workflow
+    label: "{{ workflow.id }} ({{ workflow.state | default('present') }})"

@@ -32,6 +32,24 @@ Re-running pulls the configured branch, reinstalls requirements, rebuilds the fr
 code changed, migrates, and restarts the services. Set `cloudgene_tls_enabled: false` to serve
 plain HTTP (e.g. before DNS is ready); flip it on and re-run to obtain the certificate.
 
+## Workflows
+
+Workflows are declared in `cloudgene_workflows` in `group_vars/all/vars.yml`. For each entry the
+`workflows` role downloads the release zip to `/opt/cloudgene-workflows/<id>/`, links the app's
+`cloudgene.yml` to a file in the `qcif/daff-cloudgene` clone (`/opt/daff-cloudgene`), and runs
+`manage.py ensure_workflow` to register it with the given access, `profile`, `work_dir` and
+`trust_output`.
+
+- **Add:** append an entry (see the Taxodactyl example) and re-run the playbook.
+- **Upgrade/replace:** change `archive_url`, `archive_root` and `cloudgene_yml` to the new
+  version's values (use a new `id` if both versions should stay installed).
+- **Remove:** set `state: absent`, run the playbook (unregisters it and deletes the files), then
+  delete the entry.
+- Per-app `nextflow.env` / `nextflow.config` (credentials) are not managed here; set them in
+  Admin > Workflows.
+- The `ensure_workflow` / `uninstall_workflow` commands are in this repo, so the server needs a
+  code version that has them (`cloudgene_version`).
+
 ## On the server
 
 ```

@@ -7,3 +7,4 @@
     - postgresql
     - cloudgene
     - nginx
+    - workflows

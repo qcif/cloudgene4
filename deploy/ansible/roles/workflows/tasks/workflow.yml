@@ -1,0 +1,65 @@
+---
+- name: Set paths for {{ workflow.id }}
+  ansible.builtin.set_fact:
+    workflows_dir: "{{ cloudgene_workflows_dir }}/{{ workflow.id }}"
+    workflows_app_dir: "{{ cloudgene_workflows_dir }}/{{ workflow.id }}/{{ workflow.archive_root }}"
+
+- name: Install {{ workflow.id }}
+  when: workflow.state | default('present') == 'present'
+  block:
+    - name: Create the workflow directory
+      ansible.builtin.file:
+        path: "{{ workflows_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Download and extract the workflow
+      ansible.builtin.unarchive:
+        src: "{{ workflow.archive_url }}"
+        dest: "{{ workflows_dir }}"
+        remote_src: true
+        creates: "{{ workflows_app_dir }}/main.nf"
+
+    - name: Link cloudgene.yml to the configs repository
+      ansible.builtin.file:
+        src: "{{ cloudgene_workflow_configs_dir }}/{{ workflow.cloudgene_yml }}"
+        dest: "{{ workflows_app_dir }}/cloudgene.yml"
+        state: link
+        force: true
+
+    - name: Register the workflow with Cloudgene
+      ansible.builtin.command:
+        argv: >-
+          {{ ['/usr/local/bin/cloudgene-manage', 'ensure_workflow', workflows_app_dir]
+          + (['--public'] if workflow.public | default(false) else [])
+          + (['--disabled'] if not (workflow.enabled | default(true)) else [])
+          + (['--trust-output'] if workflow.trust_output | default(false) else [])
+          + (['--groups', workflow.groups | default([]) | join(',')] if workflow.groups | default([]) else [])
+          + (['--profile', workflow.profile] if workflow.profile | default('') else [])
+          + (['--work-dir', workflow.work_dir] if workflow.work_dir | default('') else []) }}
+      become: true
+      become_user: "{{ cloudgene_user }}"
+      register: workflows_ensure
+      changed_when: "workflows_ensure.stdout_lines[-1].startswith('changed:')"
+
+- name: Remove {{ workflow.id }}
+  when: workflow.state | default('present') == 'absent'
+  block:
+    - name: Unregister the workflow from Cloudgene
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/cloudgene-manage
+          - uninstall_workflow
+          - "{{ workflow.id }}"
+          - --missing-ok
+      become: true
+      become_user: "{{ cloudgene_user }}"
+      register: workflows_uninstall
+      changed_when: "workflows_uninstall.stdout_lines[-1].startswith('changed:')"
+
+    - name: Delete the workflow files
+      ansible.builtin.file:
+        path: "{{ workflows_dir }}"
+        state: absent

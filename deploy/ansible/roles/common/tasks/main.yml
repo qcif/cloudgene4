@@ -12,6 +12,7 @@
       - python3-psycopg2
       - python3-venv
       - ufw
+      - unzip
     state: present
     update_cache: true
     cache_valid_time: 3600
