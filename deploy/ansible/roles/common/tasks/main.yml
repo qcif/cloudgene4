@@ -1,0 +1,69 @@
+---
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - acl
+      - build-essential
+      - git
+      - libpq-dev
+      - nodejs
+      - npm
+      - python3-dev
+      - python3-psycopg2
+      - python3-venv
+      - ufw
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create the cloudgene group
+  ansible.builtin.group:
+    name: "{{ cloudgene_group }}"
+    system: true
+
+- name: Create the cloudgene system user
+  ansible.builtin.user:
+    name: "{{ cloudgene_user }}"
+    group: "{{ cloudgene_group }}"
+    system: true
+    home: "{{ cloudgene_home }}"
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Create the code directory (empty, ready for the git clone)
+  ansible.builtin.file:
+    path: "{{ cloudgene_root }}"
+    state: directory
+    owner: "{{ cloudgene_user }}"
+    group: "{{ cloudgene_group }}"
+    mode: "0755"
+
+- name: Create CLOUDGENE_HOME
+  ansible.builtin.file:
+    path: "{{ cloudgene_home }}"
+    state: directory
+    owner: "{{ cloudgene_user }}"
+    group: "{{ cloudgene_group }}"
+    mode: "0750"
+
+- name: Create the env file directory
+  ansible.builtin.file:
+    path: "{{ cloudgene_env_dir }}"
+    state: directory
+    owner: root
+    group: "{{ cloudgene_group }}"
+    mode: "0750"
+
+- name: Firewall - allow SSH, HTTP and HTTPS
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: ["22", "80", "443"]
+  when: cloudgene_ufw_enabled | bool
+
+- name: Firewall - enable with default deny
+  community.general.ufw:
+    state: enabled
+    policy: deny
+  when: cloudgene_ufw_enabled | bool

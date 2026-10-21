@@ -1,0 +1,17 @@
+---
+- name: Install Java
+  ansible.builtin.apt:
+    name: openjdk-21-jre-headless
+    state: present
+
+- name: Install Nextflow {{ nextflow_version }}
+  ansible.builtin.get_url:
+    url: "{{ nextflow_url }}"
+    dest: "/usr/local/bin/nextflow-{{ nextflow_version }}"
+    mode: "0755"
+
+- name: Point /usr/local/bin/nextflow at the pinned version
+  ansible.builtin.file:
+    src: "/usr/local/bin/nextflow-{{ nextflow_version }}"
+    dest: /usr/local/bin/nextflow
+    state: link

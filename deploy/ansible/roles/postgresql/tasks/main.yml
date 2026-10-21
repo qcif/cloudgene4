@@ -1,0 +1,28 @@
+---
+- name: Install PostgreSQL
+  ansible.builtin.apt:
+    name: postgresql
+    state: present
+
+- name: Enable and start PostgreSQL
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Create the database role
+  community.postgresql.postgresql_user:
+    name: "{{ cloudgene_db_user }}"
+    password: "{{ cloudgene_db_password }}"
+    encrypted: true
+  become: true
+  become_user: postgres
+  no_log: true
+
+- name: Create the database
+  community.postgresql.postgresql_db:
+    name: "{{ cloudgene_db_name }}"
+    owner: "{{ cloudgene_db_user }}"
+    encoding: UTF-8
+  become: true
+  become_user: postgres

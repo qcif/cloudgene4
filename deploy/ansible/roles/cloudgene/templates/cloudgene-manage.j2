@@ -1,0 +1,9 @@
+#!/bin/bash
+# Managed by Ansible. Run manage.py with the production environment, e.g.
+#   sudo -u {{ cloudgene_user }} cloudgene-manage createsuperuser
+set -euo pipefail
+set -a
+. {{ cloudgene_env_file }}
+set +a
+cd {{ cloudgene_root }}
+exec {{ cloudgene_root }}/venv/bin/python manage.py "$@"

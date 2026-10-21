@@ -1,0 +1,43 @@
+# Managed by Ansible - based on deploy/nginx.conf.example.
+{% macro proxy() %}
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+{% endmacro %}
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ cloudgene_domain }};
+
+    location /.well-known/acme-challenge/ { root /var/www/letsencrypt; }
+
+{% if nginx_ssl | bool %}
+    location / { return 301 https://$host$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name {{ cloudgene_domain }};
+
+    ssl_certificate     /etc/letsencrypt/live/{{ cloudgene_domain }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ cloudgene_domain }}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+{% endif %}
+    # Keep in sync with settings.yaml server.max_upload_mb.
+    client_max_body_size {{ cloudgene_client_max_body_size }};
+    client_body_timeout 300s;
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+
+{{ proxy() }}
+}

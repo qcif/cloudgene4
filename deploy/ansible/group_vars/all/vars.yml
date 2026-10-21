@@ -1,0 +1,37 @@
+---
+# Public host name; its DNS A record must point at the VM before the first run.
+cloudgene_domain: cloudgene4.qcif.edu.au
+cloudgene_letsencrypt_email: c.hyde@qcif.edu.au
+
+# Serve over HTTPS using a Let's Encrypt certificate. This also switches on the secure
+# cookie / SSL redirect / HSTS settings in the Django env file.
+cloudgene_tls_enabled: true
+cloudgene_hsts_seconds: 31536000
+
+cloudgene_repo: https://github.com/qcif/cloudgene4.git
+cloudgene_version: rebuild
+
+cloudgene_user: cloudgene
+cloudgene_group: cloudgene
+cloudgene_root: /opt/cloudgene
+cloudgene_home: /var/lib/cloudgene
+cloudgene_env_dir: /etc/cloudgene
+cloudgene_env_file: "{{ cloudgene_env_dir }}/cloudgene.env"
+
+cloudgene_db_name: cloudgene
+cloudgene_db_user: cloudgene
+cloudgene_db_password: "{{ vault_cloudgene_db_password }}"
+cloudgene_django_secret_key: "{{ vault_django_secret_key }}"
+
+cloudgene_admin_user: admin
+cloudgene_admin_email: "{{ cloudgene_letsencrypt_email }}"
+# Optional: leave undefined to skip create_admin.
+cloudgene_admin_password: "{{ vault_cloudgene_admin_password | default(omit) }}"
+
+# Keep >= settings.yaml server.max_upload_mb (default 1024).
+cloudgene_client_max_body_size: 1024m
+
+nextflow_version: 26.10.3
+nextflow_url: "https://github.com/nextflow-io/nextflow/releases/download/v{{ nextflow_version }}/nextflow-{{ nextflow_version }}-dist"
+
+cloudgene_ufw_enabled: true

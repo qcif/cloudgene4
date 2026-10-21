@@ -1,0 +1,7 @@
+---
+# Copy to vault.yml and encrypt:  ansible-vault encrypt group_vars/all/vault.yml
+# The DB password ends up in a URL: use only letters, digits, '-', '_' (no shell/URL specials).
+vault_cloudgene_db_password: CHANGE-ME
+# python -c "import secrets; print(secrets.token_urlsafe(50))"
+vault_django_secret_key: CHANGE-ME-LONG-RANDOM-VALUE
+vault_cloudgene_admin_password: CHANGE-ME

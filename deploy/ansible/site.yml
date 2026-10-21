@@ -1,0 +1,9 @@
+---
+- name: Deploy Cloudgene (nginx + gunicorn + worker + PostgreSQL)
+  hosts: cloudgene
+  roles:
+    - common
+    - runtime
+    - postgresql
+    - cloudgene
+    - nginx

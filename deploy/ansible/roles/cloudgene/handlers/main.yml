@@ -1,0 +1,9 @@
+---
+# Handlers run at the end of the play, i.e. after migrate (DEPLOYMENT.md section 5).
+- name: Restart cloudgene
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: restarted
+  loop:
+    - cloudgene-web.service
+    - cloudgene-worker.service

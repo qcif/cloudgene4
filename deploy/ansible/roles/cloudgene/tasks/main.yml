@@ -1,0 +1,146 @@
+---
+- name: Check out the code
+  ansible.builtin.git:
+    repo: "{{ cloudgene_repo }}"
+    dest: "{{ cloudgene_root }}"
+    version: "{{ cloudgene_version }}"
+    force: false
+  become: true
+  become_user: "{{ cloudgene_user }}"
+  register: cloudgene_checkout
+  notify: Restart cloudgene
+
+- name: Install Python requirements
+  ansible.builtin.pip:
+    requirements: "{{ cloudgene_root }}/requirements.txt"
+    virtualenv: "{{ cloudgene_root }}/venv"
+    virtualenv_command: python3 -m venv
+  become: true
+  become_user: "{{ cloudgene_user }}"
+  notify: Restart cloudgene
+
+- name: Check whether the frontend has been built
+  ansible.builtin.stat:
+    path: "{{ cloudgene_root }}/static/frontend"
+  register: cloudgene_frontend_built
+
+- name: Build the frontend
+  ansible.builtin.shell: |
+    set -e
+    npm ci
+    npm run build
+  args:
+    chdir: "{{ cloudgene_root }}/frontend"
+  become: true
+  become_user: "{{ cloudgene_user }}"
+  when: cloudgene_checkout.changed or not cloudgene_frontend_built.stat.exists
+  changed_when: true
+  notify: Restart cloudgene
+
+- name: Write the environment file
+  ansible.builtin.template:
+    src: cloudgene.env.j2
+    dest: "{{ cloudgene_env_file }}"
+    owner: root
+    group: "{{ cloudgene_group }}"
+    mode: "0640"
+  no_log: true
+  notify: Restart cloudgene
+
+- name: Install the manage.py wrapper
+  ansible.builtin.template:
+    src: cloudgene-manage.j2
+    dest: /usr/local/bin/cloudgene-manage
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create CLOUDGENE_HOME sub-directories
+  ansible.builtin.file:
+    path: "{{ cloudgene_home }}/{{ item }}"
+    state: directory
+    owner: "{{ cloudgene_user }}"
+    group: "{{ cloudgene_group }}"
+    mode: "0750"
+  loop: [config, pages]
+
+- name: Seed pages and global Nextflow config (never overwrites admin edits)
+  ansible.builtin.copy:
+    src: "{{ cloudgene_root }}/home/{{ item }}"
+    dest: "{{ cloudgene_home }}/{{ item }}"
+    remote_src: true
+    force: false
+    owner: "{{ cloudgene_user }}"
+    group: "{{ cloudgene_group }}"
+    mode: "0640"
+  loop:
+    - pages/about.html
+    - pages/footer.html
+    - pages/home.html
+    - config/nextflow.config
+    - config/nextflow.env
+
+- name: Apply database migrations
+  ansible.builtin.command: /usr/local/bin/cloudgene-manage migrate --noinput
+  become: true
+  become_user: "{{ cloudgene_user }}"
+  register: cloudgene_migrate
+  changed_when: "'No migrations to apply' not in cloudgene_migrate.stdout"
+
+- name: Collect static files
+  ansible.builtin.command: /usr/local/bin/cloudgene-manage collectstatic --noinput
+  become: true
+  become_user: "{{ cloudgene_user }}"
+  register: cloudgene_collectstatic
+  changed_when: cloudgene_collectstatic.stdout is not search('(^|\\s)0 static files copied')
+  notify: Restart cloudgene
+
+- name: Create or update the admin user
+  ansible.builtin.command: >-
+    /usr/local/bin/cloudgene-manage create_admin
+    --username {{ cloudgene_admin_user | quote }}
+    --email {{ cloudgene_admin_email | quote }}
+  environment:
+    CLOUDGENE_ADMIN_PASSWORD: "{{ cloudgene_admin_password }}"
+  become: true
+  become_user: "{{ cloudgene_user }}"
+  when: cloudgene_admin_password is defined
+  no_log: true
+  changed_when: false
+
+- name: Run Django deployment checks
+  ansible.builtin.command: /usr/local/bin/cloudgene-manage check --deploy --fail-level WARNING
+  become: true
+  become_user: "{{ cloudgene_user }}"
+  when: cloudgene_tls_enabled | bool
+  changed_when: false
+
+- name: Install systemd units from the repository
+  ansible.builtin.copy:
+    src: "{{ cloudgene_root }}/deploy/systemd/{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - cloudgene-web.service
+    - cloudgene-worker.service
+    - cloudgene-cleanup.service
+    - cloudgene-cleanup.timer
+  register: cloudgene_units
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: cloudgene_units.changed  # noqa: no-handler
+
+- name: Enable and start the services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - cloudgene-web.service
+    - cloudgene-worker.service
+    - cloudgene-cleanup.timer
