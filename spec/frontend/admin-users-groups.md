@@ -105,7 +105,7 @@ Out of scope:
   "already exists", any case) MUST be shown under the input; other errors in the page alert
   (`group-error`). On success the input MUST clear and the list reload.
 - **FE-AUSER-032** The Delete button of the `admin` group MUST be disabled. Deleting another
-  group MUST ask for confirmation (`group-delete-dialog`, naming the group and member count) and
+  group MUST ask for confirmation in a modal (`group-delete-dialog`, naming the group and member count; Cancel, the X and a backdrop click dismiss it) and
   then call `deleteGroup(id)`; success MUST reload the list.
 - **FE-AUSER-033** The member count of each group MUST be a button (`group-members`, tooltip
   "View", containing `group-member-count`) that is the only control for opening

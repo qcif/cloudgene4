@@ -457,7 +457,7 @@ def test_d3_admin_users(page, login, api, fresh_user, expect_api_error):
     modal.get_by_test_id('group-create-submit').click()
     expect(modal.get_by_test_id('group-create-error')).to_contain_text('already exists')
     new_row.get_by_test_id('group-delete').click()
-    modal.get_by_test_id('group-delete-confirm').click()
+    page.get_by_test_id('group-delete-confirm').click()
     expect(new_row).to_have_count(0)
     page.goto('/admin/users')
     page.get_by_test_id('admin-users-search').fill(user['username'])

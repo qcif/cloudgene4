@@ -232,22 +232,39 @@ async function doDelete() {
             </tbody>
           </table>
           <div v-else class="text-center text-muted" data-testid="group-empty">No groups yet.</div>
+    </div>
+    </div>
 
-          <div v-if="confirmDelete" class="alert alert-danger mt-3" data-testid="group-delete-dialog">
+    <div
+      v-if="confirmDelete"
+      class="modal d-block"
+      tabindex="-1"
+      style="background: rgba(0,0,0,0.5);"
+      data-testid="group-delete-dialog"
+      @click.self="confirmDelete = null"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Delete group</h5>
+            <button type="button" class="btn-close" aria-label="Close" :disabled="deleting" @click="confirmDelete = null"></button>
+          </div>
+          <div class="modal-body">
             Delete group <strong>{{ confirmDelete.name }}</strong>?
             Its {{ confirmDelete.member_count }} member(s) lose access to workflows restricted to it.
-            <span v-if="isAuto(confirmDelete)" data-testid="group-delete-auto-warning">{{ AUTO_DELETE_WARNING }}</span>
-            <div class="mt-2">
-              <button class="btn btn-sm btn-danger me-2" :disabled="deleting" data-testid="group-delete-confirm" @click="doDelete">
-                Delete
-              </button>
-              <button class="btn btn-sm btn-secondary" :disabled="deleting" data-testid="group-delete-cancel" @click="confirmDelete = null">
-                Cancel
-              </button>
-            </div>
+            <div v-if="isAuto(confirmDelete)" class="mt-2 text-muted small" data-testid="group-delete-auto-warning">{{ AUTO_DELETE_WARNING }}</div>
           </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" :disabled="deleting" data-testid="group-delete-cancel" @click="confirmDelete = null">
+              Cancel
+            </button>
+            <button class="btn btn-danger" :disabled="deleting" data-testid="group-delete-confirm" @click="doDelete">
+              <span v-if="deleting" class="spinner-border spinner-border-sm me-1"></span>
+              Delete
+            </button>
           </div>
-        
+        </div>
+      </div>
     </div>
 
     <GroupMembersModal
