@@ -132,6 +132,38 @@ class ConfigLoadTest(TempHomeMixin, SimpleTestCase):
             config.validate_settings({'navbar': [{'title': 'Bad', 'url': '//evil.example'}]})
         self.assertIn('navbar[0].url', ctx.exception.errors)
 
+    def test_auto_groups_defaults_to_empty_and_valid_rule_loads(self):
+        self.assertEqual(config.load_settings()['auto_groups'], [])
+        rule = {'pattern': r'.*@example\.org', 'groups': ['example', 'trial-users']}
+        self.write_yaml({'auto_groups': [rule]})
+        self.assertEqual(config.load_settings()['auto_groups'], [rule])
+        self.assertTrue(config.config_status()['ok'])
+
+    def test_auto_groups_bad_rules_are_inert_and_others_keep_working(self):
+        good = {'pattern': r'.*@good\.org', 'groups': ['good']}
+        self.write_yaml({'auto_groups': [
+            {'pattern': '(unclosed', 'groups': ['a']},
+            {'pattern': 'x' * 501, 'groups': ['b']},
+            {'pattern': '.*', 'groups': ['ok', 'bad name', 'admin', 'Admin']},
+            good,
+        ]})
+        with self.assertLogs('core.config', 'ERROR'):
+            rules = config.load_settings()['auto_groups']
+        self.assertEqual(rules[0]['pattern'], '')
+        self.assertEqual(rules[1]['pattern'], '')
+        self.assertEqual(rules[2]['groups'], ['ok'])
+        self.assertEqual(rules[3], good)
+        errors = config.config_status()['errors']
+        self.assertIn('auto_groups[0].pattern', errors)
+        self.assertIn('auto_groups[1].pattern', errors)
+        self.assertEqual(len(errors['auto_groups[2].groups']), 3)
+        self.assertNotIn('auto_groups[3].pattern', errors)
+
+    def test_auto_groups_pattern_is_required(self):
+        with self.assertRaises(config.ConfigError) as ctx:
+            config.validate_settings({'auto_groups': [{'groups': ['a']}]})
+        self.assertIn('auto_groups[0].pattern', ctx.exception.errors)
+
     def test_mail_tls_and_ssl_mutually_exclusive_in_a_hand_edited_file(self):
         # C-01: the schema itself catches the impossible combination, not just the
         # admin-panel serializer, so a hand-edited settings.yaml is caught too.
@@ -215,6 +247,15 @@ class ConfigWriteTest(TempHomeMixin, SimpleTestCase):
         config.clear_cache()
         self.assertEqual(config.get('server.name'), 'Orig')
         self.assertEqual([p for p in config.config_dir().iterdir() if p.suffix == '.tmp'], [])
+
+    def test_update_settings_with_a_bad_auto_groups_rule_raises_and_keeps_file(self):
+        config.save_settings({'server': {'name': 'Orig'}})
+        before = config.settings_path().read_text()
+        with self.assertRaises(config.ConfigError) as ctx:
+            config.update_settings({'auto_groups': [{'pattern': '(', 'groups': ['admin']}]})
+        self.assertIn('auto_groups[0].pattern', ctx.exception.errors)
+        self.assertIn('auto_groups[0].groups', ctx.exception.errors)
+        self.assertEqual(config.settings_path().read_text(), before)
 
     def test_concurrent_writers_from_processes_do_not_lose_updates(self):
         config.save_settings({})

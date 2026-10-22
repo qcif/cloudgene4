@@ -108,6 +108,16 @@ Committed defaults
   lines without `=` and keys not matching `^[A-Za-z_][A-Za-z0-9_]*$`; it MUST strip an
   `export ` prefix and one pair of matching surrounding quotes.
 
+Automatic group rules
+
+- **BE-CONF-021** `auto_groups[i].pattern` MUST compile as a Python regular expression and MUST
+  be at most 500 characters; otherwise an error is recorded on `auto_groups[i].pattern` and the
+  pattern becomes `''`. Every name in `auto_groups[i].groups` MUST pass the group name rule
+  ([accounts.md](accounts.md), BE-ACCT-002) and MUST NOT be `admin` in any letter case; otherwise
+  an error is recorded on `auto_groups[i].groups` and only that name is dropped. Other rules
+  and names MUST keep working, and a write containing any such error MUST raise `ConfigError`
+  (BE-CONF-011).
+
 ## Interfaces
 
 ### Public functions (`core/config.py`)
@@ -164,6 +174,7 @@ Validation messages: `Must be true or false.`, `Must be an integer.`, `Must be a
 | `nextflow.profile` | str | `''` | default `-profile` | same |
 | `nextflow.work_dir` | str | `''` | `''` = `<job>/work`; relative = under `CLOUDGENE_HOME` | same |
 | `navbar` | list of mappings | `[]` | each item: `title` (str, required), `url` (str, required, BE-CONF-008), `icon` (str), `admin_only` (bool), `auth_only` (bool) | [server-pages-mail.md](server-pages-mail.md) |
+| `auto_groups` | list of mappings | `[]` | each item: `pattern` (str, required, BE-CONF-021; matched as in BE-ACCT-028), `groups` (list of str, `[]`, BE-CONF-021) | [accounts.md](accounts.md) |
 | `apps` | list of mappings | `[]` | each item: `path` (str, required; app dir or `cloudgene.yaml`, relative to `apps/` then `CLOUDGENE_HOME`, or absolute), `enabled` (bool, true), `public` (bool, false), `groups` (list of str, `[]`), `profile` (str), `work_dir` (str) | [workflow-registry.md](workflow-registry.md) |
 
 A mapping section given as a non-mapping records `Must be a mapping.` and uses `{}`. A list
@@ -229,6 +240,7 @@ there is no notification channel.
 | BE-CONF-018 | `core/tests/test_config.py::CommittedHomeTest::test_committed_settings_yaml_is_valid_and_complete` | unit |
 | BE-CONF-019 | `core/tests/test_config.py::CommittedHomeTest::test_committed_layout`; (planned) `.gitignore` coverage test | unit |
 | BE-CONF-020 | `core/tests/test_config.py::PathsAndPagesTest::test_parse_env` | unit |
+| BE-CONF-021 | `core/tests/test_config.py::ConfigLoadTest::test_auto_groups_defaults_to_empty_and_valid_rule_loads`, `::test_auto_groups_bad_rules_are_inert_and_others_keep_working`, `::test_auto_groups_pattern_is_required`; `core/tests/test_config.py::ConfigWriteTest::test_update_settings_with_a_bad_auto_groups_rule_raises_and_keeps_file` | unit |
 
 Also relevant: `e2e/exploratory/test_probe_misc.py::test_unknown_keys_preserved` (exploratory,
 not part of the gating suite).

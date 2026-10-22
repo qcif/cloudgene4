@@ -29,6 +29,7 @@ from core.permissions import ADMIN_GROUP, IsAdmin, is_admin
 from core.serializers import MessageSerializer
 
 from . import validation
+from .groups import apply_auto_groups
 from .models import User, hash_token, new_token
 from .serializers import (
     MSG_EMAIL_TAKEN, MSG_USERNAME_TAKEN,
@@ -249,6 +250,7 @@ class ActivateAccountView(APIView):
         user.activated_at = timezone.now()
         user.save(update_fields=['is_active', 'activated_at'])
         logger.info('Activated user %s', user.username)
+        apply_auto_groups(user)
         return Response({'status': 'activated',
                          'message': 'Your account has been activated. You can log in now.'})
 

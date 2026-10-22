@@ -43,6 +43,8 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+AUTO_GROUPS_PATTERN_MAX = 500
+ADMIN_GROUP_NAME = 'admin'
 SLUG_RE = re.compile(r'^[a-z0-9][a-z0-9_-]{0,63}$')
 # nextflow.env value: a quoted string (anything may follow, e.g. a comment) or an unquoted
 # word, where - as in a shell - ``#`` starts a comment only at the start or after whitespace.
@@ -202,6 +204,10 @@ SCHEMA: dict[str, Any] = {
         'profile': Field(str, '', help='Per-app Nextflow -profile (overrides nextflow.profile)'),
         'work_dir': Field(str, '', help='Per-app Nextflow work dir (overrides nextflow.work_dir)'),
     }, required=('path',)),
+    'auto_groups': ListOf({
+        'pattern': Field(str, '', help='Regular expression fully matched against the e-mail'),
+        'groups': Field(list, [], help='Groups the user joins when the pattern matches'),
+    }, required=('pattern',)),
 }
 
 
@@ -268,6 +274,36 @@ def _validate_cross_fields(cleaned: dict, errors: dict) -> None:
             item['url'] = ''
 
 
+def _validate_auto_groups(cleaned: dict, errors: dict) -> None:
+    """``auto_groups[i].pattern`` must compile and be short; ``groups`` names must pass the
+    group name rule and never be ``admin``. Bad values are made inert."""
+    from accounts.validation import validate_group_name
+    for i, rule in enumerate(cleaned.get('auto_groups') or []):
+        pattern = rule.get('pattern') or ''
+        if len(pattern) > AUTO_GROUPS_PATTERN_MAX:
+            errors.setdefault(f'auto_groups[{i}].pattern', []).append(
+                f'Must be at most {AUTO_GROUPS_PATTERN_MAX} characters.')
+            rule['pattern'] = ''
+        elif pattern:
+            try:
+                re.compile(pattern)
+            except re.error as exc:
+                errors.setdefault(f'auto_groups[{i}].pattern', []).append(
+                    f'Not a valid regular expression: {exc}.')
+                rule['pattern'] = ''
+        kept = []
+        for name in rule.get('groups') or []:
+            if name.strip().lower() == ADMIN_GROUP_NAME:
+                msg = 'The "admin" group cannot be assigned automatically.'
+            else:
+                msg = validate_group_name(name)
+            if msg:
+                errors.setdefault(f'auto_groups[{i}].groups', []).append(f'{name!r}: {msg}')
+            else:
+                kept.append(name.strip())
+        rule['groups'] = kept
+
+
 def _clean(data: dict | None) -> tuple[dict, dict[str, list[str]]]:
     """Clean ``data`` against :data:`SCHEMA`. Never raises: every key with an error (incl.
     cross-field rules) falls back to its default in the returned document, and the errors
@@ -279,6 +315,7 @@ def _clean(data: dict | None) -> tuple[dict, dict[str, list[str]]]:
     errors: dict[str, list[str]] = {}
     cleaned = _clean_section(SCHEMA, data, '', errors)
     _validate_cross_fields(cleaned, errors)
+    _validate_auto_groups(cleaned, errors)
     return cleaned, errors
 
 

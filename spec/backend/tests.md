@@ -418,6 +418,7 @@ was missing.
 | BE-CONF-018 | MUST | `core-cfg::CommittedHomeTest::test_committed_settings_yaml_is_valid_and_complete` | unit | exists |
 | BE-CONF-019 | MUST | `core-cfg::CommittedHomeTest::test_committed_layout` | unit | exists |
 | BE-CONF-020 | MUST | `core-cfg::PathsAndPagesTest::test_parse_env` | unit | exists |
+| BE-CONF-021 | MUST | `core-cfg::ConfigLoadTest::test_auto_groups_defaults_to_empty_and_valid_rule_loads`, `::test_auto_groups_bad_rules_are_inert_and_others_keep_working`, `::test_auto_groups_pattern_is_required`; `core-cfg::ConfigWriteTest::test_update_settings_with_a_bad_auto_groups_rule_raises_and_keeps_file` | unit | exists |
 
 ### [authentication.md](authentication.md)
 
@@ -481,6 +482,12 @@ was missing.
 | BE-ACCT-024 | MUST | `acct::SelfDeleteTest::test_last_admin_cannot_delete_self` | unit | exists |
 | BE-ACCT-025 | MUST | `acct::SelfDeleteTest::test_delete_logs_out`; `jobs-api::CleanupCommandTest::test_deleting_a_user_removes_job_workspaces`; `e2e:accounts::test_a6_delete_own_account` | unit, e2e | exists |
 | BE-ACCT-026 | MUST | `acct::RegistrationTest::test_link_uses_server_url`, `::test_link_falls_back_to_request_host` (p) | unit | exists+planned |
+| BE-ACCT-027 | MUST | `acct::AutoGroupsTest::test_matching_user_joins_group_on_activation`, `::test_already_active_reuse_does_not_allocate`, `::test_registration_without_activation_does_not_allocate`, `::test_email_change_does_not_allocate`; `e2e:accounts::test_a1b_activation_applies_auto_groups` | unit, e2e | exists |
+| BE-ACCT-028 | MUST | `acct::AutoGroupsTest::test_full_match_only`, `::test_case_insensitive`, `::test_non_matching_user_gets_nothing` | unit | exists |
+| BE-ACCT-029 | MUST | `acct::AutoGroupsTest::test_several_matching_rules_give_the_union`, `::test_missing_group_created_and_existing_group_reused`, `::test_activation_does_not_remove_existing_memberships` | unit | exists |
+| BE-ACCT-030 | MUST | `acct::AutoGroupsTest::test_admin_group_is_skipped_even_if_validation_was_bypassed` | unit | exists |
+| BE-ACCT-031 | MUST | `acct::AutoGroupsTest::test_allocation_failure_still_activates_and_logs_error` | unit | exists |
+| BE-ACCT-032 | MUST | `acct::AutoGroupsTest::test_info_record_written` | unit | exists |
 
 ### [access-control.md](access-control.md)
 
@@ -929,9 +936,9 @@ requirements, not tests.
 | overview.md | 25 | 25 | 19 | 6 | 0 |
 | api-contract.md | 31 | 30 | 20 | 10 | 1 |
 | data-model.md | 18 | 18 | 17 | 1 | 0 |
-| configuration.md | 20 | 20 | 18 | 2 | 0 |
+| configuration.md | 21 | 21 | 19 | 2 | 0 |
 | authentication.md | 27 | 26 | 20 | 7 | 0 |
-| accounts.md | 26 | 26 | 26 | 0 | 0 |
+| accounts.md | 32 | 32 | 32 | 0 | 0 |
 | access-control.md | 16 | 16 | 13 | 3 | 0 |
 | workflow-definition.md | 31 | 29 | 28 | 1 | 2 |
 | workflow-registry.md | 28 | 28 | 25 | 3 | 0 |
@@ -946,9 +953,9 @@ requirements, not tests.
 | logging.md | 19 | 19 | 13 | 6 | 0 |
 | management-commands.md | 28 | 28 | 20 | 8 | 0 |
 | tests.md | 21 | 21 | 11 | 10 | 0 |
-| **Total** | **514** | **505** | **431** | **77** | **6** |
+| **Total** | **521** | **512** | **438** | **77** | **6** |
 
-MUST requirements: 505, of which 429 have an existing test, 75 have only planned
+MUST requirements: 512, of which 436 have an existing test, 75 have only planned
 tests and 1 has none (BE-API-060, a process rule).
 
 ## Known gaps

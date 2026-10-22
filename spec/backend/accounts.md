@@ -40,6 +40,7 @@ Out of scope:
 - [authentication.md](authentication.md) — sessions, lockout fields, token authentication.
 - [configuration.md](configuration.md) — `security.require_activation`, `server.url`,
   `server.name`.
+- [configuration.md](configuration.md) — `auto_groups` (BE-CONF-021).
 - [server-pages-mail.md](server-pages-mail.md) — `core.mail.send_mail`.
 - [job-queue-worker.md](job-queue-worker.md) — workspace removal when jobs are deleted by cascade.
 
@@ -153,6 +154,25 @@ Out of scope:
   accepts from `ALLOWED_HOSTS`). User-supplied values (`full_name`, `username`) appear only in
   the plain-text body; no HTML mail is sent.
 
+**Automatic group membership** (`auto_groups`, [configuration.md](configuration.md), BE-CONF-021)
+
+- **BE-ACCT-027** — Group allocation MUST run only on the first valid use of an activation link
+  (the `activated` answer of BE-ACCT-012). It MUST NOT run on later use of the link, on
+  registration with `security.require_activation: false`, when an admin sets `is_active`, when
+  a user changes their e-mail, or in `create_admin`.
+- **BE-ACCT-028** — A rule MUST match when its pattern fully matches (`re.fullmatch`,
+  case-insensitive) the stored e-mail address. A rule with an empty pattern MUST NOT match.
+- **BE-ACCT-029** — The user MUST join the union of the groups of every matching rule. Groups
+  that do not exist MUST be created. Allocation MUST only add memberships; it MUST NOT remove
+  any, and a membership already held MUST NOT be an error.
+- **BE-ACCT-030** — Allocation MUST NOT add a user to the `admin` group, whatever its letter
+  case, even if a rule names it.
+- **BE-ACCT-031** — A failure during allocation MUST NOT change the activation answer (200
+  `activated`) or undo the activation. It MUST be logged at ERROR on `cloudgene.auth` with the
+  username.
+- **BE-ACCT-032** — A successful allocation that added the user to at least one group MUST be
+  logged at INFO on `cloudgene.auth`, naming the user and the groups.
+
 ## Interfaces
 
 | operationId | Method, path | Who | Success | Error codes |
@@ -191,6 +211,17 @@ raises `MailError` inside the transaction, so the row is rolled back and 503 is 
 errors.
 
 Activation keeps the hashed key after use; `activated_at` distinguishes "already active".
+
+Group allocation (`accounts/groups.py::apply_auto_groups`) runs after the activation is saved,
+inside its own savepoint. Activation is the trigger because it is the moment the user has proven
+that they control the address; matching on an unverified address would let anyone claim an
+institution's groups. Full match (not search) stops `@unimelb\.edu\.au` matching
+`x@unimelb.edu.au.evil.com`; operators write `.*@domain`. Patterns are admin-controlled input run
+by Python `re`, which has no timeout: a catastrophic pattern could stall one activation request.
+This is accepted (admin-only input, e-mail ≤ 254 chars) and bounded by the pattern length cap
+(BE-CONF-021). Creating a group does not re-sync the workflow registry, so a workflow that names
+a newly created group in `apps[].groups` becomes visible to the group's members only after the
+next sync (BE-WREG-011).
 
 Password reset request: always the same 200. For an active account it stores a fresh hashed
 token (overwriting any older one) and tries to send the mail; failures are only logged.
@@ -238,6 +269,12 @@ so `Bob` and `bob` could both register. Now normalisation (`User.save`), seriali
 | BE-ACCT-024 | unit `accounts/tests.py::SelfDeleteTest::test_last_admin_cannot_delete_self` |
 | BE-ACCT-025 | unit `accounts/tests.py::SelfDeleteTest::test_delete_logs_out`; unit `jobs/tests/test_api.py::CleanupCommandTest::test_deleting_a_user_removes_job_workspaces`; e2e `e2e/tests/test_accounts.py::test_a6_delete_own_account` |
 | BE-ACCT-026 | unit `accounts/tests.py::RegistrationTest::test_link_uses_server_url`; request-host fallback (planned) `accounts/tests.py::RegistrationTest::test_link_falls_back_to_request_host` |
+| BE-ACCT-027 | unit `accounts/tests.py::AutoGroupsTest::test_matching_user_joins_group_on_activation`, `::test_already_active_reuse_does_not_allocate`, `::test_registration_without_activation_does_not_allocate`, `::test_email_change_does_not_allocate`; e2e `e2e/tests/test_accounts.py::test_a1b_activation_applies_auto_groups` |
+| BE-ACCT-028 | unit `accounts/tests.py::AutoGroupsTest::test_full_match_only`, `::test_case_insensitive`, `::test_non_matching_user_gets_nothing` |
+| BE-ACCT-029 | unit `accounts/tests.py::AutoGroupsTest::test_several_matching_rules_give_the_union`, `::test_missing_group_created_and_existing_group_reused`, `::test_activation_does_not_remove_existing_memberships` |
+| BE-ACCT-030 | unit `accounts/tests.py::AutoGroupsTest::test_admin_group_is_skipped_even_if_validation_was_bypassed` |
+| BE-ACCT-031 | unit `accounts/tests.py::AutoGroupsTest::test_allocation_failure_still_activates_and_logs_error` |
+| BE-ACCT-032 | unit `accounts/tests.py::AutoGroupsTest::test_info_record_written` |
 
 ## Known gaps
 
@@ -250,6 +287,13 @@ so `Bob` and `bob` could both register. Now normalisation (`User.save`), seriali
 | BE-ACCT-013 | No rate limit on reset requests or registrations; one address can be mailed repeatedly (see BE-AUTH-026). | `accounts/views.py:258-291` | major |
 
 ## Open questions
+
+- Should an admin setting `is_active: true` on a pending user also allocate groups? Today it does
+  not (the address is not verified).
+- Should `config_status()` warn when `auto_groups` is non-empty while `security.require_activation`
+  is `false`? Today the rules are silently never applied.
+- Should a management command backfill `auto_groups` for users who are already active?
+- Should `auto_groups` be editable from Admin → Settings (a separate admin API and frontend task)?
 
 - Activation keys never expire. Should unactivated accounts or keys expire after a set time?
 - Changing the e-mail in `me_partial_update` takes effect immediately, with no confirmation sent

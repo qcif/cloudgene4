@@ -503,6 +503,108 @@ class PasswordResetTest(APITestCase):
 
 # --- Profile (A3, A7) -----------------------------------------------------------------------------
 
+class AutoGroupsTest(APITestCase):
+    UNIMELB = {'pattern': r'.*@(.+\.)?unimelb\.edu\.au', 'groups': ['unimelb']}
+
+    def activate(self, email, rules, **overrides):
+        with setting('auto_groups', rules):
+            register(self.client, email=email, **overrides)
+            key = link_token(mail.outbox[-1], '/activate/')
+            return self.client.post(f'/api/auth/activate/{key}/')
+
+    def groups(self):
+        return sorted(User.objects.get(username='newuser').groups.values_list('name', flat=True))
+
+    def test_matching_user_joins_group_on_activation(self):
+        r = self.activate('new@student.unimelb.edu.au', [self.UNIMELB])
+        self.assertEqual(r.json()['status'], 'activated')
+        self.assertEqual(self.groups(), ['unimelb'])
+
+    def test_full_match_only(self):
+        self.activate('x@unimelb.edu.au.evil.com', [self.UNIMELB])
+        self.assertEqual(self.groups(), [])
+
+    def test_case_insensitive(self):
+        self.activate('New@Unimelb.EDU.au', [{'pattern': r'.*@UNIMELB\.edu\.au',
+                                             'groups': ['unimelb']}])
+        self.assertEqual(self.groups(), ['unimelb'])
+
+    def test_several_matching_rules_give_the_union(self):
+        rules = [self.UNIMELB, {'pattern': '.*edu.*', 'groups': ['edu', 'unimelb']},
+                 {'pattern': '.*@other.org', 'groups': ['other']}]
+        self.activate('a@unimelb.edu.au', rules)
+        self.assertEqual(self.groups(), ['edu', 'unimelb'])
+
+    def test_non_matching_user_gets_nothing(self):
+        self.activate('a@example.org', [self.UNIMELB])
+        self.assertEqual(self.groups(), [])
+        self.assertFalse(Group.objects.filter(name='unimelb').exists())
+
+    def test_missing_group_created_and_existing_group_reused(self):
+        existing = Group.objects.create(name='unimelb')
+        self.activate('a@unimelb.edu.au', [self.UNIMELB])
+        self.assertEqual(Group.objects.filter(name='unimelb').count(), 1)
+        self.assertEqual(User.objects.get(username='newuser').groups.get(), existing)
+
+    def test_activation_does_not_remove_existing_memberships(self):
+        register(self.client)
+        user = User.objects.get(username='newuser')
+        user.groups.add(Group.objects.create(name='manual'))
+        key = link_token(mail.outbox[-1], '/activate/')
+        with setting('auto_groups', [self.UNIMELB, {'pattern': '.*', 'groups': ['all']}]):
+            self.client.post(f'/api/auth/activate/{key}/')
+        self.assertEqual(self.groups(), ['all', 'manual'])
+
+    def test_already_active_reuse_does_not_allocate(self):
+        r = self.activate('a@unimelb.edu.au', [self.UNIMELB])
+        User.objects.get(username='newuser').groups.clear()
+        key = link_token(mail.outbox[-1], '/activate/')
+        with setting('auto_groups', [self.UNIMELB]):
+            r = self.client.post(f'/api/auth/activate/{key}/')
+        self.assertEqual(r.json()['status'], 'already_active')
+        self.assertEqual(self.groups(), [])
+
+    def test_registration_without_activation_does_not_allocate(self):
+        with setting('security.require_activation', False), \
+                setting('auto_groups', [self.UNIMELB]):
+            register(self.client, email='a@unimelb.edu.au')
+        self.assertEqual(self.groups(), [])
+
+    def test_email_change_does_not_allocate(self):
+        user = make_user('alice', email='alice@x.org')
+        self.client.login(username='alice', password=PASSWORD)
+        with setting('auto_groups', [self.UNIMELB]):
+            r = self.client.patch('/api/me/', {'email': 'alice@unimelb.edu.au',
+                                               'current_password': PASSWORD}, format='json')
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(user.groups.exists())
+
+    def test_admin_group_is_skipped_even_if_validation_was_bypassed(self):
+        register(self.client)
+        key = link_token(mail.outbox[-1], '/activate/')
+        rules = [{'pattern': '.*', 'groups': ['Admin', 'admin', 'ok']}]
+        with mock.patch('accounts.groups.config.get', return_value=rules):
+            self.client.post(f'/api/auth/activate/{key}/')
+        self.assertEqual(self.groups(), ['ok'])
+        self.assertFalse(Group.objects.filter(name__iexact='admin').exists())
+
+    def test_allocation_failure_still_activates_and_logs_error(self):
+        register(self.client)
+        key = link_token(mail.outbox[-1], '/activate/')
+        with mock.patch('accounts.groups.matching_group_names', side_effect=RuntimeError('x')), \
+                self.assertLogs('cloudgene.auth', 'ERROR') as logs:
+            r = self.client.post(f'/api/auth/activate/{key}/')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['status'], 'activated')
+        self.assertTrue(User.objects.get(username='newuser').is_active)
+        self.assertIn('newuser', logs.output[0])
+
+    def test_info_record_written(self):
+        with self.assertLogs('cloudgene.auth', 'INFO') as logs:
+            self.activate('a@unimelb.edu.au', [self.UNIMELB])
+        self.assertIn('Auto-assigned newuser to groups unimelb', '\n'.join(logs.output))
+
+
 class ProfileTest(APITestCase):
     def setUp(self):
         self.user = make_user('alice', email='alice@x.org')

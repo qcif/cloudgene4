@@ -99,9 +99,36 @@ on-disk document leniently first).
 | `nextflow.work_dir` | string | `''` | Global Nextflow work directory; empty = `<job>/work` (overridden per-app) |
 | `navbar[]` | list | Home, My Jobs, About | `{title, url, icon, admin_only: false, auth_only: false}`; `url` must be an internal path (`/…`, not `//…`) or an `http(s)://` URL — anything else is a validation error |
 | `apps[]` | list | `[]` | Installed workflows: `{path, enabled: true, public: false, groups: [], trust_output: false, profile: '', work_dir: ''}` — see *Installing workflows* |
+| `auto_groups[]` | list | `[]` | `{pattern, groups: []}` — adds users to groups when they activate their account; see *Automatic group membership* |
 
 Unknown keys are preserved (not validated) so that in-progress features can add keys before this
 table is updated.
+
+### Automatic group membership
+
+`auto_groups` maps e-mail address patterns to groups, so everyone from one institution gets access
+to the workflows restricted to their group without an admin adding them by hand:
+
+```yaml
+auto_groups:
+  - pattern: '.*@(.+\.)?unimelb\.edu\.au'
+    groups: [unimelb]
+  - pattern: '.*@example\.org'
+    groups: [example, trial-users]
+```
+
+- The pattern is a Python regular expression that must match the **whole** address, ignoring case.
+  Write `.*@domain` explicitly: `@unimelb\.edu\.au` alone matches nothing, which also stops
+  `x@unimelb.edu.au.evil.com` from matching `.*@unimelb\.edu\.au`.
+- Every rule that matches applies; the user joins the union of their groups. Missing groups are
+  created. After a group is created, workflows that list it in `apps[].groups` pick it up on the
+  next workflow registry sync.
+- Rules only run when a user clicks the e-mailed activation link for the first time. They do not
+  apply when `security.require_activation` is `false`, when an admin activates an account, when a
+  user changes their e-mail address, or to users who are already active.
+- Rules only add memberships. They never remove one, and they can never grant `admin`.
+- Edit `auto_groups` in `settings.yaml` by hand; the admin panel does not show it but keeps it when
+  it saves other settings.
 
 ### Cross-field validation
 
@@ -109,6 +136,8 @@ Two rules apply to the *resulting* document, not just the fields in one request,
 admin `PUT` (or a hand-edited file) can never produce an invalid combination:
 - `mail.use_tls` and `mail.use_ssl` cannot both be `true`.
 - Every `navbar[].url` must start with `/` (and not `//`) or be an `http://`/`https://` URL.
+- Every `auto_groups[].pattern` must be a valid regular expression of at most 500 characters, and
+  `auto_groups[].groups` must hold valid group names other than `admin`.
 
 ## Admin panel pages
 

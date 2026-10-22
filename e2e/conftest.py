@@ -147,6 +147,13 @@ class ServerSettings:
         self.stack.write_settings(data)
         time.sleep(1.1)  # mtime-based caches need a newer second
 
+    def set_key(self, key, value):
+        """Set a top-level key (e.g. a list such as ``auto_groups``)."""
+        data = self.stack.read_settings()
+        data[key] = value
+        self.stack.write_settings(data)
+        time.sleep(1.1)
+
     def restore(self):
         self.stack.write_settings(copy.deepcopy(self.original))
 

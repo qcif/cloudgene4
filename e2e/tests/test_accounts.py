@@ -82,6 +82,33 @@ def test_a1_register_activate_login(page, stack, expect_api_error):
     Navbar(page).expect_logged_in(name)
 
 
+@pytest.mark.serial
+def test_a1b_activation_applies_auto_groups(page, stack, api, server_settings):
+    """An `auto_groups` rule adds the user to its group when the e-mailed link is used."""
+    name = uniq('auto')
+    email = f'{name}@auto.e2e.test'
+    server_settings.set_key('auto_groups', [
+        {'pattern': r'.*@auto\.e2e\.test', 'groups': ['researchers', 'auto-e2e']}])
+    page.goto('/register')
+    page.get_by_test_id('register-username').fill(name)
+    page.get_by_test_id('register-full-name').fill('Auto Grouped')
+    page.get_by_test_id('register-email').fill(email)
+    page.get_by_test_id('register-password').fill(PASSWORD)
+    page.get_by_test_id('register-password-confirm').fill(PASSWORD)
+    page.get_by_test_id('register-submit').click()
+    expect(page.get_by_test_id('register-success')).to_be_visible()
+
+    admin = api('admin')
+    assert admin.get_json(f'/api/admin/users/?search={name}')['results'][0]['groups'] == []
+
+    link = extract_link(latest_email(stack.outbox_dir, to=email), '/activate/')
+    page.goto(path_of(link))
+    expect(page.get_by_test_id('activate-success')).to_have_attribute('data-status', 'activated')
+
+    user = admin.get_json(f'/api/admin/users/?search={name}')['results'][0]
+    assert sorted(user['groups']) == ['auto-e2e', 'researchers']
+
+
 # --- A2 (K1) -----------------------------------------------------------------------------------
 
 def test_a2_case_variant_duplicates_rejected(page, api, expect_api_error):
