@@ -11,7 +11,7 @@ description: Create a new task
 - Ensure that you draw from the relevant specifications in ./spec/ so that the
   task is coherent with project objectives and constraints.
 - Before writing the task, check tasks/todo.md for any related items that should
-  be included.
+  be included. Remove any todo items that are now captured
 - Don't write code in the task - pseudocode or examples only
 - If the task involves frontend or backend code, ensure that unit test coverage
   is included as part of the task description.
