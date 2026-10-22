@@ -136,6 +136,10 @@ permissions in Cloudgene — membership is the only thing that matters.
 
 ## Behaviour
 
+Group membership normally comes from an admin (`admin_users_partial_update`); it can also be
+added automatically when a user activates their account, from `auto_groups` rules (see
+[accounts.md](accounts.md), BE-ACCT-027 to BE-ACCT-032).
+
 Access decision order for an `/api/` request:
 
 1. Authentication ([authentication.md](authentication.md)); a bad token is 401 before any
