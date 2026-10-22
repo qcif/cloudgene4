@@ -9,7 +9,7 @@ cloudgene_tls_enabled: true
 cloudgene_hsts_seconds: 31536000
 
 cloudgene_repo: https://github.com/qcif/cloudgene4.git
-cloudgene_version: rebuild
+cloudgene_version: main
 
 cloudgene_user: cloudgene
 cloudgene_group: cloudgene
