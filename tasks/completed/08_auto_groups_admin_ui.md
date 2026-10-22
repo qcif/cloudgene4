@@ -349,3 +349,14 @@ relevant spec's Open questions.
   (flaky; passes alone), `test_command_steps_run_and_show_output` and
   `test_submit_hello_with_unicode_job_name` (job output arrives mojibake-encoded, a locale/Nextflow
   environment issue). Not investigated further.
+- **Follow-up change requested by the user (deviation from the brief).** The Groups modal became a
+  full page: `GroupManagementModal` was removed and replaced by `views/admin/AdminGroupsView.vue`
+  at `/admin/groups`, with a "Groups" sidebar item after "Users" (`admin-nav-groups`). The Groups
+  button on the Users page is gone. The member-count badge is now the button that opens the
+  members (tooltip "View"), replacing the separate Members button. The two tabs, editor and test
+  ids are unchanged. The unsaved-changes confirm now also fires on leaving the route. Spec
+  (admin-users-groups, layout-navigation, routing, both api-contract and tests files) and e2e
+  tests were updated to match; FE-AUSER-030/033 were reworded.
+- **Missing icons.** The "white" icons were not a code problem: in the demo dev server Vite
+  returned 403 for the Font Awesome font because `node_modules` was a symlink outside the
+  worktree. Fixed for the demo with an untracked `vite.demo.config.js` (not committed).

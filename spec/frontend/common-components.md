@@ -93,7 +93,7 @@ Current users of the components:
 | Component | Used by |
 |-----------|---------|
 | `ConfirmDialog` | `JobListView`, `JobDetailView`, `AdminJobsView`, `AdminWorkflowsView`, `PagesView` |
-| Own inline confirmation (text-interpolated) | `AdminUsersView` (delete user), `GroupManagementModal` (delete group) |
+| Own inline confirmation (text-interpolated) | `AdminUsersView` (delete user), `AdminGroupsView` (delete group) |
 | `Pagination` | `JobListView`, `AdminJobsView`, `AdminUsersView`, `LogsView` |
 | `initials` / `avatarHue` | `AdminUsersView`, `GroupMembersModal` |
 
@@ -140,11 +140,11 @@ interpolated data.
 | FE-UI-024 | `ConfirmDialog` has no `role="dialog"`/`aria-modal`/`aria-labelledby`, no focus management, no `Escape` handling, and the close button has no `aria-label`. | `frontend/src/components/common/ConfirmDialog.vue:14-19` | minor |
 | FE-UI-032 | Previous/Next buttons are only styled disabled; they stay focusable and keyboard activation emits `change(0)` or `change(totalPages + 1)`. | `frontend/src/components/common/Pagination.vue:18-31` | minor |
 | FE-UI-033 | All page numbers are rendered (no window) and the active page has no `aria-current`. | `frontend/src/components/common/Pagination.vue:8-12`, `:21-28` | minor |
-| FE-UI-020 | Destructive confirmations are implemented three ways (`ConfirmDialog`, an inline modal in `AdminUsersView`, an inline alert in `GroupManagementModal`); behaviour and accessibility differ between them. | `frontend/src/views/admin/AdminUsersView.vue:272-300`, `frontend/src/components/admin/GroupManagementModal.vue:164-170` | minor |
+| FE-UI-020 | Destructive confirmations are implemented three ways (`ConfirmDialog`, an inline modal in `AdminUsersView`, an inline alert in `AdminGroupsView`); behaviour and accessibility differ between them. | `frontend/src/views/admin/AdminUsersView.vue:272-300`, `frontend/src/views/admin/AdminGroupsView.vue` | minor |
 | FE-UI-052 | Decorative Font Awesome icons across the app lack `aria-hidden="true"`. | e.g. `frontend/src/components/layout/AdminSidebar.vue:40` | minor |
 | FE-UI-010–033 | No component unit tests exist for `AlertMessage`, `ConfirmDialog`, `LoadingSpinner` or `Pagination`. | `frontend/src/test/` | minor |
 
 ## Open questions
 
 1. Should `ConfirmDialog` drop HTML messages entirely (text `message` + `subject` prop), retiring FE-UI-023's escaping rule?
-2. Should the two inline confirmations (`AdminUsersView`, `GroupManagementModal`) be migrated to `ConfirmDialog` once it is accessible?
+2. Should the two inline confirmations (`AdminUsersView`, `AdminGroupsView`) be migrated to `ConfirmDialog` once it is accessible?

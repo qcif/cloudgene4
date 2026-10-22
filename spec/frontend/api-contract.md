@@ -163,9 +163,9 @@ schema where one is named.
 | operationId | Function (file:line) | Request the function builds | Used by | Contract test |
 |---|---|---|---|---|
 | admin_dashboard | `getDashboard` (admin.js:6) | — | views/admin/AdminDashboardView.vue | admin-api |
-| admin_groups_list | `listGroups` (users.js:40) | — | views/admin/AdminUsersView.vue, views/admin/AdminWorkflowSettingsView.vue, components/admin/GroupManagementModal.vue | users.test.js › admin groups › listGroups → plain array with member_count (`adminGroupListSchema`) |
-| admin_groups_create | `createGroup` (users.js:43) | body `{name}` (caller-built) | components/admin/GroupManagementModal.vue | users.test.js › admin groups › createGroup / deleteGroup |
-| admin_groups_destroy | `deleteGroup` (users.js:46) | path `id` | components/admin/GroupManagementModal.vue | users.test.js › admin groups › createGroup / deleteGroup |
+| admin_groups_list | `listGroups` (users.js:40) | — | views/admin/AdminUsersView.vue, views/admin/AdminWorkflowSettingsView.vue, views/admin/AdminGroupsView.vue | users.test.js › admin groups › listGroups → plain array with member_count (`adminGroupListSchema`) |
+| admin_groups_create | `createGroup` (users.js:43) | body `{name}` (caller-built) | views/admin/AdminGroupsView.vue | users.test.js › admin groups › createGroup / deleteGroup |
+| admin_groups_destroy | `deleteGroup` (users.js:46) | path `id` | views/admin/AdminGroupsView.vue | users.test.js › admin groups › createGroup / deleteGroup |
 | admin_jobs_list | `listAdminJobs` (admin.js:44); duplicate `adminListJobs` (jobs.js:34, unused) | query from `{state, user, workflow, page}` with empty values dropped; never sends `page_size`, `search` | views/admin/AdminJobsView.vue | admin-api.test.js › admin api › sends only non-empty admin job filters (C6); jobs.test.js › jobs api endpoints › admin endpoints |
 | admin_jobs_cancel_create | `cancelAdminJob` (admin.js:51); duplicate `adminCancelJob` (jobs.js:35, unused) | path `id`, no body | views/admin/AdminJobsView.vue | admin-api; jobs.test.js › admin endpoints |
 | admin_jobs_restart_create | `restartAdminJob` (admin.js:52) **and** `adminRestartJob` (jobs.js:36; alias `restartJob` jobs.js:38, unused) | path `id`, no body | AdminJobsView.vue (admin.js); views/public/JobDetailView.vue (jobs.js) | admin-api; jobs.test.js › admin endpoints |
@@ -185,7 +185,7 @@ schema where one is named.
 | admin_settings_mail_test | `sendTestMail` (admin.js:18) | `{to}` or `{}` | MailSettingsView.vue | admin-api (both forms) |
 | admin_settings_navbar_retrieve | `getNavbar` (admin.js:21) | — | GeneralSettingsView.vue | admin-api |
 | admin_settings_navbar_update | `updateNavbar` (admin.js:22) | body `{navbar: [...]}` (array wrapped by the function) | GeneralSettingsView.vue | admin-api |
-| admin_settings_auto_groups_retrieve | `getAutoGroups` (admin.js) | — | GroupManagementModal.vue | admin-users-groups |
+| admin_settings_auto_groups_retrieve | `getAutoGroups` (admin.js) | — | views/admin/AdminGroupsView.vue | admin-users-groups |
 | admin_settings_auto_groups_update | `updateAutoGroups` (admin.js) | body `{auto_groups: [...]}` (array wrapped by the function) | AutoGroupRulesEditor.vue | admin-users-groups |
 | admin_settings_auto_groups_test | `testAutoGroups` (admin.js) | `{email}` or `{email, auto_groups}` (rules omitted when not given) | AutoGroupRulesEditor.vue | admin-users-groups |
 | admin_settings_nextflow_retrieve | `getNextflowSettings` (admin.js:19) | — | views/admin/settings/NextflowSettingsView.vue | admin-api |

@@ -137,6 +137,7 @@ Out of scope:
 | `/admin` | `admin/AdminDashboardView.vue` | `requiresAdmin` | [admin-dashboard-jobs.md](admin-dashboard-jobs.md) |
 | `/admin/jobs` | `admin/AdminJobsView.vue` | `requiresAdmin` | [admin-dashboard-jobs.md](admin-dashboard-jobs.md) |
 | `/admin/users` | `admin/AdminUsersView.vue` | `requiresAdmin` | [admin-users-groups.md](admin-users-groups.md) |
+| `/admin/groups` | `admin/AdminGroupsView.vue` | `requiresAdmin` | [admin-users-groups.md](admin-users-groups.md) |
 | `/admin/workflows` | `admin/AdminWorkflowsView.vue` | `requiresAdmin` | [admin-workflows.md](admin-workflows.md) |
 | `/admin/workflows/:id` | `admin/AdminWorkflowSettingsView.vue` | `requiresAdmin` | [admin-workflows.md](admin-workflows.md) |
 | `/admin/settings/general` | `admin/settings/GeneralSettingsView.vue` | `requiresAdmin` | [admin-settings.md](admin-settings.md) |

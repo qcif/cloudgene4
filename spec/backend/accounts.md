@@ -294,7 +294,7 @@ so `Bob` and `bob` could both register. Now normalisation (`User.save`), seriali
   is `false`? Today the rules are silently never applied.
 - Should a management command backfill `auto_groups` for users who are already active?
 - ~~Should `auto_groups` be editable from the admin UI?~~ Answered by task 08_auto_groups_admin_ui:
-  rules are edited and tested in Admin → Users → Groups → Automatic membership; see BE-ADM-080…084
+  rules are edited and tested in Admin → Groups → Automatic membership; see BE-ADM-080…084
   in [admin-api.md](admin-api.md). The test endpoint shares `match_auto_groups` with activation.
 
 - Activation keys never expire. Should unactivated accounts or keys expire after a set time?

@@ -53,6 +53,11 @@ const router = createRouter({
       meta: { requiresAdmin: true },
     },
     {
+      path: '/admin/groups',
+      component: () => import('@/views/admin/AdminGroupsView.vue'),
+      meta: { requiresAdmin: true },
+    },
+    {
       path: '/admin/workflows',
       component: () => import('@/views/admin/AdminWorkflowsView.vue'),
       meta: { requiresAdmin: true },

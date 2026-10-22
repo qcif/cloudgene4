@@ -69,7 +69,7 @@ Out of scope (linked instead):
 ### Admin layout
 
 - **FE-NAV-040** Every admin view (`/admin` and `/admin/**`) MUST render its content inside `AdminLayout`, which shows `AdminSidebar` beside a `main` content area, below the global navbar (so admins keep the site navigation).
-- **FE-NAV-041** `AdminSidebar` MUST list, in this order: Dashboard (`/admin`), Jobs (`/admin/jobs`), Users (`/admin/users`), Workflows (`/admin/workflows`), then a `Settings` heading with General, Nextflow, Pages, Mail, Logs (`/admin/settings/<name>`). Every link MUST resolve to a defined route.
+- **FE-NAV-041** `AdminSidebar` MUST list, in this order: Dashboard (`/admin`), Jobs (`/admin/jobs`), Users (`/admin/users`), Groups (`/admin/groups`), Workflows (`/admin/workflows`), then a `Settings` heading with General, Nextflow, Pages, Mail, Logs (`/admin/settings/<name>`). Every link MUST resolve to a defined route.
 - **FE-NAV-042** The sidebar link for the current section MUST be marked active. `Dashboard` MUST be active only on exactly `/admin`; other links MUST be active on their path and its sub-paths (e.g. `Workflows` on `/admin/workflows/hello`).
 - **FE-NAV-043** The sidebar MUST be shown only inside admin routes, which are admin-only by route guard; non-admins never see it.
 

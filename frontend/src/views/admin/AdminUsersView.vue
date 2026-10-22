@@ -8,7 +8,6 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import AlertMessage from '@/components/common/AlertMessage.vue'
-import GroupManagementModal from '@/components/admin/GroupManagementModal.vue'
 
 const ADMIN_GROUP = 'admin'
 const PAGE_SIZE = 20
@@ -24,7 +23,6 @@ const busy = ref({}) // user id → true while a request for that row runs
 const error = ref('')
 const confirmUser = ref(null)
 const deleting = ref(false)
-const showGroupModal = ref(false)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
 // The admin group is managed with the "Admin" toggle, not as a chip.
@@ -116,10 +114,6 @@ async function doDelete() {
   }
 }
 
-function handleGroupsUpdated() {
-  Promise.all([fetchGroups(), fetchUsers(currentPage.value)])
-}
-
 const isSelf = (user) => auth.user?.id === user.id
 const formatDate = (iso) => (iso ? new Date(iso).toLocaleDateString() : '–')
 </script>
@@ -142,9 +136,6 @@ const formatDate = (iso) => (iso ? new Date(iso).toLocaleDateString() : '–')
             <i class="fas fa-search"></i>
           </button>
         </form>
-        <button class="btn btn-outline-primary" data-testid="admin-users-manage-groups" @click="showGroupModal = true">
-          <i class="fas fa-users-cog me-1"></i> Groups
-        </button>
       </div>
     </div>
 
@@ -299,12 +290,6 @@ const formatDate = (iso) => (iso ? new Date(iso).toLocaleDateString() : '–')
       </div>
     </div>
 
-    <GroupManagementModal
-      v-if="showGroupModal"
-      :show="showGroupModal"
-      @close="showGroupModal = false"
-      @groups-updated="handleGroupsUpdated"
-    />
   </AdminLayout>
 </template>
 

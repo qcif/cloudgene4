@@ -13,7 +13,7 @@ to avoid offering actions that would fail.
 Covered:
 
 - `frontend/src/views/admin/AdminUsersView.vue` (route `/admin/users`)
-- `frontend/src/components/admin/GroupManagementModal.vue`
+- `frontend/src/views/admin/AdminGroupsView.vue` (route `/admin/groups`)
 - `frontend/src/components/admin/GroupMembersModal.vue`
 - `frontend/src/components/admin/AutoGroupRulesEditor.vue` (the "Automatic membership" tab)
 - Admin functions of `frontend/src/api/admin.js`: `getAutoGroups`, `updateAutoGroups`,
@@ -93,21 +93,23 @@ Out of scope:
   page above 1, the previous page MUST be loaded. Cancel MUST make no request. A failure MUST
   show the envelope message (fallback "Delete failed.") and close the dialog.
 
-### Groups modal
+### Groups page
 
-- **FE-AUSER-030** The Groups button (`admin-users-manage-groups`) MUST open
-  `GroupManagementModal` (`group-modal`), which MUST load `listGroups()` and list each group
-  (`group-row`, `data-group`) with its `member_count`, or "No groups yet." when empty.
+- **FE-AUSER-030** `/admin/groups` (`AdminGroupsView`, `group-page`, reachable only by an admin
+  like FE-AUSER-001) MUST load `listGroups()` and list each group (`group-row`, `data-group`)
+  with its `member_count`, or "No groups yet." when empty. The `AdminSidebar` MUST link to it
+  (`admin-nav-groups`) directly after Users. The Users page MUST NOT have a Groups button.
 - **FE-AUSER-031** Creating a group MUST first validate the name with `validateGroupName` and
   show the message under the input (`group-create-error`) without a request when invalid. A
   valid name MUST be sent trimmed via `createGroup({name})`. A 400 with `fields.name` (e.g.
-  "already exists", any case) MUST be shown under the input; other errors in the modal alert
-  (`group-error`). On success the input MUST clear, the list reload and the parent re-fetch
-  users and groups.
+  "already exists", any case) MUST be shown under the input; other errors in the page alert
+  (`group-error`). On success the input MUST clear and the list reload.
 - **FE-AUSER-032** The Delete button of the `admin` group MUST be disabled. Deleting another
   group MUST ask for confirmation (`group-delete-dialog`, naming the group and member count) and
-  then call `deleteGroup(id)`; success MUST reload the list and notify the parent.
-- **FE-AUSER-033** The members button (`group-members`) MUST open `GroupMembersModal`
+  then call `deleteGroup(id)`; success MUST reload the list.
+- **FE-AUSER-033** The member count of each group MUST be a button (`group-members`, tooltip
+  "View", containing `group-member-count`) that is the only control for opening
+  `GroupMembersModal`
   (`group-members-modal`), which MUST load `listUsers({group: <name>, page_size: 200})` and
   list members (`group-member`, `data-username`), or "No members. Add users to this group from
   the user list." when empty.
@@ -119,11 +121,11 @@ Out of scope:
 
 ### Automatic membership
 
-- **FE-AUSER-050** `GroupManagementModal` MUST have two tabs, "Groups" (`group-tab-groups`, the
+- **FE-AUSER-050** `AdminGroupsView` MUST have two tabs, "Groups" (`group-tab-groups`, the
   default) and "Automatic membership" (`group-tab-auto`). The modal MUST load `getAutoGroups()`
   once with the group list and show a spinner on the second tab until it returns. On failure the
   tab MUST show the envelope message, fallback "Could not load automatic membership rules.".
-  If the editor has unsaved changes, switching tab or closing the modal MUST ask for confirmation
+  If the editor has unsaved changes, switching tab or leaving the page MUST ask for confirmation
   first and do nothing when declined.
 - **FE-AUSER-051** The editor (`auto-rules-editor`) MUST explain that users join the groups when
   they activate their account from the e-mail link, that the address must fully match, that
@@ -182,7 +184,7 @@ Out of scope:
 `AutoGroupRulesEditor` props: `rules`, `requireActivation`, `existingGroups`; emits `saved` (the
 `AutoGroups` response) and `dirty` (boolean).
 
-Events: `GroupManagementModal` emits `close`, `groups-updated`; `GroupMembersModal` emits
+Events: `GroupMembersModal` emits
 `close`, `members-changed`. Shapes: `AdminUser`, `PaginatedAdminUserList`, `AdminGroup` — see
 [api-contract.md](api-contract.md).
 
@@ -209,9 +211,10 @@ Events: `GroupManagementModal` emits `close`, `groups-updated`; `GroupMembersMod
 | FE-AUSER-024 | `frontend/src/test/views/AdminUsersView.test.js` › own row and superuser buttons disabled (planned) | unit |
 | FE-AUSER-025 | `e2e/tests/test_accounts.py::test_d3_admin_users` (delete) | e2e |
 | FE-AUSER-030, 031, 032 | `e2e/tests/test_accounts.py::test_d3_admin_users` (member counts, create, duplicate in other case, admin delete disabled, delete); `frontend/src/test/contracts/users.test.js` › admin groups › listGroups / createGroup / deleteGroup; `frontend/src/utils/validation.test.js` | e2e, contract, unit |
-| FE-AUSER-050 | `frontend/src/test/components/AutoGroupRulesEditor.test.js` › GroupManagementModal automatic membership › shows the load error and asks before discarding unsaved edits | unit |
+| FE-AUSER-050 | `frontend/src/test/components/AutoGroupRulesEditor.test.js` › AdminGroupsView automatic membership › shows the load error and asks before discarding unsaved edits | unit |
 | FE-AUSER-051, 052, 053, 054, 056 | `frontend/src/test/components/AutoGroupRulesEditor.test.js` › AutoGroupRulesEditor › *; `frontend/src/test/admin-api.test.js` (request shapes); `e2e/tests/test_accounts.py::test_a1c_admin_edits_auto_groups` | unit, contract, e2e |
-| FE-AUSER-055 | `frontend/src/test/components/AutoGroupRulesEditor.test.js` › GroupManagementModal automatic membership › marks groups named by a rule and warns when deleting one | unit |
+| FE-AUSER-055 | `frontend/src/test/components/AutoGroupRulesEditor.test.js` › AdminGroupsView automatic membership › marks groups named by a rule and warns when deleting one | unit |
+| FE-AUSER-033 (button) | `frontend/src/test/components/AutoGroupRulesEditor.test.js` › AdminGroupsView automatic membership › shows the member count as the button that opens the members | unit |
 | FE-AUSER-033, 034 | `e2e/tests/test_admin_users.py::test_group_members_modal_remove_member` (planned) | e2e |
 | FE-AUSER-035 | `frontend/src/test/components/GroupModals.test.js` › backdrop closes only top modal (planned) | unit |
 | FE-AUSER-040 | `frontend/src/test/views/admin-no-vhtml.test.js` › user and group names render as text (planned) | unit |
@@ -222,10 +225,9 @@ Events: `GroupManagementModal` emits `close`, `groups-updated`; `GroupMembersMod
 |-------------|--------------------|-------|----------|
 | FE-AUSER-033 | The members modal requests one page of at most 200 (`max_page_size`) and ignores `next`; a group with more than 200 members is silently truncated. | `frontend/src/components/admin/GroupMembersModal.vue:21` | minor |
 | FE-AUSER-034 | The Remove button is disabled for every superuser in every group (`user.is_superuser`), not only in the `admin` group, so a superuser cannot be removed from e.g. `researchers` here. It is not disabled for the admin's own row in the `admin` group (server rejects with 400). | `frontend/src/components/admin/GroupMembersModal.vue:87` | minor |
-| FE-AUSER-035 | Backdrop click on the members modal also lies inside the group modal; behaviour relies on `@click.self` on separate overlays and is untested. `Escape` does not close either modal. | `frontend/src/components/admin/GroupManagementModal.vue:86`, `GroupMembersModal.vue:57` | minor |
+| FE-AUSER-035 | Behaviour of the members modal backdrop relies on `@click.self` on separate overlays and is untested. `Escape` does not close either modal. | `GroupMembersModal.vue:57` | minor |
 | FE-AUSER-012 | `fetchUsers` has no stale-response guard: a slow earlier request (e.g. previous page) can overwrite the rows of a later search. Rows are still replaced, not merged, so no duplicates appear. | `frontend/src/views/admin/AdminUsersView.vue:33-48` | minor |
 | — | The `group` and `is_active` filters that `admin_users_list` supports are not offered in the user list UI. | `frontend/src/views/admin/AdminUsersView.vue:132-144` | minor |
-| — | `GroupManagementModal` declares a `show` prop it never reads. | `frontend/src/components/admin/GroupManagementModal.vue:9-11` | minor |
 | — | No component-level tests for the three components; coverage is the single e2e `test_d3_admin_users` plus API-module contract tests. | `frontend/src/test/` | minor |
 
 ## Open questions

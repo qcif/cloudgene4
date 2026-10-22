@@ -6,6 +6,7 @@ const sections = [
       { to: '/admin', icon: 'tachometer-alt', label: 'Dashboard', id: 'dashboard', exact: true },
       { to: '/admin/jobs', icon: 'tasks', label: 'Jobs', id: 'jobs' },
       { to: '/admin/users', icon: 'users', label: 'Users', id: 'users' },
+      { to: '/admin/groups', icon: 'users-cog', label: 'Groups', id: 'groups' },
       { to: '/admin/workflows', icon: 'sitemap', label: 'Workflows', id: 'workflows' },
     ],
   },

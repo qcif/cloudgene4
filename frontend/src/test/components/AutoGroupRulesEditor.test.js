@@ -6,6 +6,7 @@ vi.mock('@/api/admin', () => ({
   updateAutoGroups: vi.fn(),
   testAutoGroups: vi.fn(),
 }))
+vi.mock('vue-router', () => ({ onBeforeRouteLeave: vi.fn() }))
 vi.mock('@/api/users', () => ({
   listGroups: vi.fn(),
   createGroup: vi.fn(),
@@ -15,7 +16,7 @@ vi.mock('@/api/users', () => ({
 import { getAutoGroups, updateAutoGroups, testAutoGroups } from '@/api/admin'
 import { listGroups } from '@/api/users'
 import AutoGroupRulesEditor from '@/components/admin/AutoGroupRulesEditor.vue'
-import GroupManagementModal from '@/components/admin/GroupManagementModal.vue'
+import AdminGroupsView from '@/views/admin/AdminGroupsView.vue'
 
 const RULES = [
   { pattern: '.*@unimelb\\.edu\\.au', groups: ['unimelb'] },
@@ -172,7 +173,7 @@ describe('AutoGroupRulesEditor', () => {
   })
 })
 
-describe('GroupManagementModal automatic membership', () => {
+describe('AdminGroupsView automatic membership', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     listGroups.mockResolvedValue({ data: GROUPS })
@@ -180,7 +181,7 @@ describe('GroupManagementModal automatic membership', () => {
   })
 
   const mountModal = async () => {
-    const wrapper = mount(GroupManagementModal)
+    const wrapper = mount(AdminGroupsView, { global: { stubs: { AdminLayout: { template: '<div><slot /></div>' } } } })
     await flushPromises()
     return wrapper
   }
@@ -199,6 +200,15 @@ describe('GroupManagementModal automatic membership', () => {
     expect(wrapper.get('[data-testid="group-delete-dialog"]').text()).not.toContain('Automatic membership rules')
   })
 
+  it('shows the member count as the button that opens the members', async () => {
+    const wrapper = await mountModal()
+    const row = wrapper.findAll('[data-testid="group-row"]').find((r) => r.attributes('data-group') === 'unimelb')
+    const button = row.get('button[data-testid="group-members"]')
+    expect(button.attributes('title')).toBe('View')
+    expect(button.get('[data-testid="group-member-count"]').text()).toBe('3')
+    expect(row.findAll('[data-testid="group-members"]')).toHaveLength(1)
+  })
+
   it('shows the load error and asks before discarding unsaved edits', async () => {
     getAutoGroups.mockRejectedValueOnce({})
     let wrapper = await mountModal()
@@ -212,8 +222,6 @@ describe('GroupManagementModal automatic membership', () => {
     await wrapper.get('[data-testid="group-tab-groups"]').trigger('click')
     expect(confirm).toHaveBeenCalled()
     expect(wrapper.find('[data-testid="auto-rules-editor"]').exists()).toBe(true)
-    await wrapper.get('[data-testid="group-modal-close"]').trigger('click')
-    expect(wrapper.emitted('close')).toBeUndefined()
     confirm.mockReturnValue(true)
     await wrapper.get('[data-testid="group-tab-groups"]').trigger('click')
     expect(wrapper.find('[data-testid="auto-rules-editor"]').exists()).toBe(false)

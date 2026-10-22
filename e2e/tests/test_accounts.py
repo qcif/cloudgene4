@@ -116,9 +116,8 @@ def test_a1c_admin_edits_auto_groups(page, stack, api, login, server_settings, e
     email = f'{name}@autoui.e2e.test'
     group = uniq('autoui-grp')
     login(page, 'admin')
-    page.goto('/admin/users')
-    page.get_by_test_id('admin-users-manage-groups').click()
-    modal = page.get_by_test_id('group-modal')
+    page.goto('/admin/groups')
+    modal = page.get_by_test_id('group-page')
     modal.get_by_test_id('group-tab-auto').click()
     expect(modal.get_by_test_id('auto-rules-editor')).to_be_visible()
 
@@ -148,7 +147,6 @@ def test_a1c_admin_edits_auto_groups(page, stack, api, login, server_settings, e
     expect(modal.get_by_test_id('auto-rules-success')).to_be_visible()
 
     page.reload()
-    page.get_by_test_id('admin-users-manage-groups').click()
     page.get_by_test_id('group-tab-auto').click()
     expect(page.get_by_test_id('auto-rule-row').nth(n_before).get_by_test_id(
         'auto-rule-group')).to_contain_text(group)
@@ -442,8 +440,9 @@ def test_d3_admin_users(page, login, api, fresh_user, expect_api_error):
     assert admin.get_json('/api/admin/users/')['count'] == total_before + 1
 
     # groups modal: member counts, create and delete a group
-    page.get_by_test_id('admin-users-manage-groups').click()
-    modal = page.get_by_test_id('group-modal')
+    page.get_by_test_id('admin-nav-groups').click()
+    expect(page).to_have_url(re.compile(r'/admin/groups$'))
+    modal = page.get_by_test_id('group-page')
     researchers = modal.locator('[data-testid="group-row"][data-group="researchers"]')
     expect(researchers.get_by_test_id('group-member-count')).to_have_text(
         str(len(admin.get_json('/api/admin/users/?group=researchers&page_size=200')['results'])))
@@ -460,7 +459,10 @@ def test_d3_admin_users(page, login, api, fresh_user, expect_api_error):
     new_row.get_by_test_id('group-delete').click()
     modal.get_by_test_id('group-delete-confirm').click()
     expect(new_row).to_have_count(0)
-    modal.get_by_test_id('group-modal-close').click()
+    page.goto('/admin/users')
+    page.get_by_test_id('admin-users-search').fill(user['username'])
+    page.get_by_test_id('admin-users-search-submit').click()
+    expect(row).to_be_visible()
 
     # delete the user
     row.get_by_test_id('admin-user-delete').click()

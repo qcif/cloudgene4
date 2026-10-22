@@ -198,7 +198,8 @@ e2e tests that open the view and assert its content. vitest coverage of views: n
 | `/run/:workflowId` | `WorkflowSubmitView` | `run_form::test_all_input_types_render_with_defaults`, `::test_client_validation_blocks_submit`, `::test_server_field_errors_are_shown_in_the_form`; `command_steps::test_run_form_shows_details_help_and_accept`; `jobs::test_submit_hello_with_unicode_job_name`; `queue::test_queue_full_rejects_submission`, `::test_maintenance_blocks_users_not_admins` |
 | `/admin` | `AdminDashboardView` | `admin_dashboard::test_d1_dashboard_counts_match_db`, `::test_d1_pause_resume_queue`, `::test_d1_maintenance_mode_banner` |
 | `/admin/jobs` | `AdminJobsView` | `admin_dashboard::test_d2_admin_jobs_filter_cancel_restart` |
-| `/admin/users` | `AdminUsersView` (+ group modals) | `accounts::test_d3_admin_users`, `::test_a7_non_admin_blocked_from_admin_ui_and_api` |
+| `/admin/users` | `AdminUsersView` | `accounts::test_d3_admin_users`, `::test_a7_non_admin_blocked_from_admin_ui_and_api` |
+| `/admin/groups` | `AdminGroupsView` (+ `GroupMembersModal`) | `accounts::test_d3_admin_users`, `::test_a1c_admin_edits_auto_groups` |
 | `/admin/workflows` | `AdminWorkflowsView` | `admin_workflows::test_d4_install_invalid_then_valid_and_uninstall`, `::test_d4_invalid_entry_listed_with_errors`, `::test_w1_d4_disable_hides_workflow_and_enable_restores`, `::test_d4_reload_after_yaml_edit` |
 | `/admin/workflows/:id` | `AdminWorkflowSettingsView` | `admin_workflows::test_d4_groups_and_public_via_settings_page`, `::test_d4_per_app_nextflow_settings_persist` |
 | `/admin/settings/general` | `GeneralSettingsView` | `admin_settings::test_d5_general_settings_round_trip`, `::test_d5_general_settings_validation_error`, `::test_d6_navbar_editor` |
@@ -215,7 +216,7 @@ e2e tests that open the view and assert its content. vitest coverage of views: n
 
 Components with vitest tests: `DynamicForm`/`ParamInput` (`contracts/dynamic-form.test.js`).
 `AlertMessage`, `ConfirmDialog`, `LoadingSpinner`, `Pagination`, `JobStatusBadge`, `JobProgress`,
-`JobResultsTab`, `JobLogTab`, `GroupManagementModal`, `GroupMembersModal` and the layout
+`JobResultsTab`, `JobLogTab`, `AdminGroupsView`, `GroupMembersModal` and the layout
 components are covered only through e2e.
 
 e2e tests that cite no frontend requirement (API-only or harness): `access_jobs::test_anonymous_cannot_download`;
@@ -711,17 +712,17 @@ frontend files appear below, followed by this file's own. Legend: see Traceabili
 | FE-AUSER-030 | MUST | `e2e:accounts::test_d3_admin_users`; `fe:contracts/users.test.js › admin groups › listGroups / createGroup / deleteGroup` †; `fe:src/utils/validation.test.js` | e2e, contract, unit | exists |
 | FE-AUSER-031 | MUST | `e2e:accounts::test_d3_admin_users`; `fe:contracts/users.test.js › admin groups › listGroups / createGroup / deleteGroup` †; `fe:src/utils/validation.test.js` | e2e, contract, unit | exists |
 | FE-AUSER-032 | MUST | `e2e:accounts::test_d3_admin_users`; `fe:contracts/users.test.js › admin groups › listGroups / createGroup / deleteGroup` †; `fe:src/utils/validation.test.js` | e2e, contract, unit | exists |
-| FE-AUSER-033 | MUST | `e2e:admin_users::test_group_members_modal_remove_member` (p) | e2e | planned |
+| FE-AUSER-033 | MUST | `fe:components/AutoGroupRulesEditor.test.js › AdminGroupsView automatic membership › shows the member count as the button that opens the members`; `e2e:admin_users::test_group_members_modal_remove_member` (p) | unit, e2e | exists+planned |
 | FE-AUSER-034 | MUST | `e2e:admin_users::test_group_members_modal_remove_member` (p) | e2e | planned |
 | FE-AUSER-035 | MUST | `fe:components/GroupModals.test.js › backdrop closes only top modal` (p) | unit | planned |
 | FE-AUSER-040 | MUST | `fe:views/admin-no-vhtml.test.js › user and group names render as text` (p) | unit | planned |
 
-| FE-AUSER-050 | MUST | `fe:components/AutoGroupRulesEditor.test.js › GroupManagementModal automatic membership › shows the load error and asks before discarding unsaved edits` | unit | exists |
+| FE-AUSER-050 | MUST | `fe:components/AutoGroupRulesEditor.test.js › AdminGroupsView automatic membership › shows the load error and asks before discarding unsaved edits` | unit | exists |
 | FE-AUSER-051 | MUST | `fe:components/AutoGroupRulesEditor.test.js › renders the rules and warns only when activation is off` | unit | exists |
 | FE-AUSER-052 | MUST | `fe:components/AutoGroupRulesEditor.test.js › adds, reorders and removes rules`, `› adds existing and new group names, and rejects admin and invalid names` | unit | exists |
 | FE-AUSER-053 | MUST | `fe:components/AutoGroupRulesEditor.test.js › saves the full list and shows server errors under the right row`, `› disables Save while the request runs`; `fe:admin-api.test.js › admin api › %#: request shape (updateAutoGroups)`; `e2e:accounts::test_a1c_admin_edits_auto_groups` | unit, contract, e2e | exists |
 | FE-AUSER-054 | MUST | `fe:components/AutoGroupRulesEditor.test.js › tests an address with the unsaved rules…`, `› omits rules from the test…`, `› shows server errors from the test…`; `fe:admin-api.test.js › admin api › %#: request shape (testAutoGroups)`; `e2e:accounts::test_a1c_admin_edits_auto_groups` | unit, contract, e2e | exists |
-| FE-AUSER-055 | MUST | `fe:components/AutoGroupRulesEditor.test.js › GroupManagementModal automatic membership › marks groups named by a rule and warns when deleting one` | unit | exists |
+| FE-AUSER-055 | MUST | `fe:components/AutoGroupRulesEditor.test.js › AdminGroupsView automatic membership › marks groups named by a rule and warns when deleting one` | unit | exists |
 | FE-AUSER-056 | MUST | `fe:components/AutoGroupRulesEditor.test.js › renders patterns, group names and results as text` | unit | exists |
 
 ### [admin-workflows.md](admin-workflows.md)

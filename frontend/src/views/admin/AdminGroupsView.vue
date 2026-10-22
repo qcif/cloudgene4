@@ -1,17 +1,14 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { getAutoGroups } from '@/api/admin'
 import { createGroup, deleteGroup, listGroups } from '@/api/users'
 import { apiErrorMessage, apiFieldErrors } from '@/api/client'
 import { firstFieldErrors, validateGroupName } from '@/utils/validation'
+import AdminLayout from '@/components/layout/AdminLayout.vue'
 import AlertMessage from '@/components/common/AlertMessage.vue'
-import AutoGroupRulesEditor from './AutoGroupRulesEditor.vue'
-import GroupMembersModal from './GroupMembersModal.vue'
-
-defineProps({
-  show: { type: Boolean, default: true },
-})
-const emit = defineEmits(['close', 'groups-updated'])
+import AutoGroupRulesEditor from '@/components/admin/AutoGroupRulesEditor.vue'
+import GroupMembersModal from '@/components/admin/GroupMembersModal.vue'
 
 const PROTECTED = 'admin'
 
@@ -58,18 +55,14 @@ function rulesSaved(data) {
   requireActivation.value = data.require_activation
 }
 
-const discardOk = () => !rulesDirty.value || window.confirm(UNSAVED_PROMPT)
-
 function switchTab(name) {
   if (name === tab.value) return
-  if (tab.value === 'auto' && !discardOk()) return
+  if (tab.value === 'auto' && rulesDirty.value && !window.confirm(UNSAVED_PROMPT)) return
   tab.value = name
   rulesDirty.value = false
 }
 
-function close() {
-  if (discardOk()) emit('close')
-}
+onBeforeRouteLeave(() => !rulesDirty.value || window.confirm(UNSAVED_PROMPT))
 
 async function refresh() {
   loading.value = true
@@ -97,7 +90,6 @@ async function create() {
     await createGroup({ name: newGroupName.value.trim() })
     newGroupName.value = ''
     await refresh()
-    emit('groups-updated')
   } catch (e) {
     nameError.value = firstFieldErrors(apiFieldErrors(e)).name || ''
     if (!nameError.value) error.value = apiErrorMessage(e, 'Creating the group failed.')
@@ -113,7 +105,6 @@ async function doDelete() {
     await deleteGroup(confirmDelete.value.id)
     confirmDelete.value = null
     await refresh()
-    emit('groups-updated')
   } catch (e) {
     error.value = apiErrorMessage(e, 'Deleting the group failed.')
     confirmDelete.value = null
@@ -122,28 +113,13 @@ async function doDelete() {
   }
 }
 
-function membersChanged() {
-  refresh()
-  emit('groups-updated')
-}
 </script>
 
 <template>
-  <div
-    class="modal d-block"
-    tabindex="-1"
-    style="background: rgba(0,0,0,0.5);"
-    data-testid="group-modal"
-    @click.self="close()"
-  >
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title"><i class="fas fa-users me-2"></i>Groups</h5>
-          <button type="button" class="btn-close" aria-label="Close" data-testid="group-modal-close-x" @click="close()"></button>
-        </div>
+  <AdminLayout>
+    <h2 class="mb-4">Groups</h2>
+    <div data-testid="group-page">
 
-        <div class="modal-body">
           <ul class="nav nav-tabs mb-3" role="tablist">
             <li class="nav-item">
               <button
@@ -229,18 +205,18 @@ function membersChanged() {
                   >auto</span>
                 </td>
                 <td class="text-center">
-                  <span class="badge bg-primary" data-testid="group-member-count">{{ group.member_count }}</span>
-                </td>
-                <td class="text-end text-nowrap">
                   <button
-                    class="btn btn-sm btn-outline-primary me-2"
-                    title="Members"
-                    :aria-label="`Members of ${group.name}`"
+                    type="button"
+                    class="btn btn-sm btn-primary py-0"
+                    title="View"
+                    :aria-label="`View members of ${group.name}`"
                     data-testid="group-members"
                     @click="selectedGroup = group"
                   >
-                    <i class="fas fa-users"></i>
+                    <span data-testid="group-member-count">{{ group.member_count }}</span>
                   </button>
+                </td>
+                <td class="text-end text-nowrap">
                   <button
                     class="btn btn-sm btn-outline-danger"
                     :title="group.name === PROTECTED ? 'The admin group cannot be deleted' : 'Delete group'"
@@ -271,19 +247,14 @@ function membersChanged() {
             </div>
           </div>
           </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-testid="group-modal-close" @click="close()">Close</button>
-        </div>
-      </div>
+        
     </div>
-  </div>
 
-  <GroupMembersModal
-    v-if="selectedGroup"
-    :group="selectedGroup"
-    @close="selectedGroup = null"
-    @members-changed="membersChanged"
-  />
+    <GroupMembersModal
+      v-if="selectedGroup"
+      :group="selectedGroup"
+      @close="selectedGroup = null"
+      @members-changed="refresh"
+    />
+  </AdminLayout>
 </template>
