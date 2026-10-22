@@ -4,6 +4,7 @@ Outgoing mail configured from ``settings.yaml`` (``mail.*``) at send time.
     from core.mail import send_mail
     send_mail(subject, body, ['user@example.org'])
 """
+from email.utils import formataddr
 from pathlib import Path
 
 from django.conf import settings
@@ -39,15 +40,19 @@ def get_connection(mail_settings=None, fail_silently=False):
     return django_mail.get_connection(backend, **kwargs)
 
 
-def from_email():
-    return config.get('mail.from_email')
+def from_email(mail_settings=None):
+    """Sender for the From header: ``Name <address>`` when ``mail.from_name`` is set."""
+    m = mail_settings or config.get('mail')
+    if m['from_name']:
+        return formataddr((m['from_name'], m['from_email']))
+    return m['from_email']
 
 
 def send_mail(subject, message, recipient_list, *, html_message=None, fail_silently=False):
     """Send one message using the mail settings from settings.yaml."""
     m = config.get('mail')
     return django_mail.send_mail(
-        subject, message, m['from_email'], recipient_list,
+        subject, message, from_email(m), recipient_list,
         html_message=html_message, fail_silently=fail_silently,
         connection=get_connection(m, fail_silently=fail_silently),
     )

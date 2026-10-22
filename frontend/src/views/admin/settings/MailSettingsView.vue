@@ -134,6 +134,12 @@ async function test() {
           <input id="m-from" v-model="mail.from_email" type="email" class="form-control" :class="{ 'is-invalid': fields.from_email }" data-testid="mail-from" />
           <div class="invalid-feedback">{{ fields.from_email?.[0] }}</div>
         </div>
+        <div class="mb-3">
+          <label class="form-label" for="m-from-name">Sender name</label>
+          <input id="m-from-name" v-model="mail.from_name" class="form-control" :class="{ 'is-invalid': fields.from_name }" placeholder="e.g. Cloudgene" data-testid="mail-from-name" />
+          <div class="invalid-feedback">{{ fields.from_name?.[0] }}</div>
+          <div class="form-text">Shown to recipients as the sender; the address above is still used for delivery.</div>
+        </div>
       </div>
       <div class="card-footer">
         <button class="btn btn-primary" type="submit" data-testid="mail-save" :disabled="!!saving">

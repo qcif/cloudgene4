@@ -17,6 +17,7 @@ VARIABLES = [
     ('CLOUDGENE_SMTP_USER', 'global', 'SMTP user (mail.user)'),
     ('CLOUDGENE_SMTP_PASSWORD', 'global', 'SMTP password (mail.password)'),
     ('CLOUDGENE_SMTP_SENDER', 'global', 'Sender address (mail.from_email)'),
+    ('CLOUDGENE_SMTP_SENDER_NAME', 'global', 'Sender display name (mail.from_name)'),
     ('CLOUDGENE_WORKSPACE_TYPE', 'global', 'Workspace type (always "local")'),
     ('CLOUDGENE_WORKSPACE_HOME', 'global',
      'Directory holding all job workspaces; ${CLOUDGENE_WORKSPACE_HOME}/${CLOUDGENE_JOB_ID} is a job\'s workspace'),
@@ -45,6 +46,7 @@ def cloudgene_variables(workflow=None, job=None, user=None) -> dict:
         'CLOUDGENE_SMTP_USER': s['mail']['user'],
         'CLOUDGENE_SMTP_PASSWORD': s['mail']['password'],
         'CLOUDGENE_SMTP_SENDER': s['mail']['from_email'],
+        'CLOUDGENE_SMTP_SENDER_NAME': s['mail']['from_name'],
         'CLOUDGENE_WORKSPACE_TYPE': 'local',
         'CLOUDGENE_WORKSPACE_HOME': str(config.jobs_dir()),
     }

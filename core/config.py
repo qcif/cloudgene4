@@ -178,6 +178,7 @@ SCHEMA: dict[str, Any] = {
         'use_tls': Field(bool, True),
         'use_ssl': Field(bool, False),
         'from_email': Field(str, 'noreply@localhost'),
+        'from_name': Field(str, '', help='Display name shown to recipients (empty = address only)'),
     },
     'nextflow': {
         'binary': Field(str, 'nextflow'),

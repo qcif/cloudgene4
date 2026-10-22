@@ -3153,6 +3153,10 @@ components:
         from_email:
           type: string
           format: email
+        from_name:
+          type: string
+          description: Display name shown to recipients
+          maxLength: 100
       required:
       - password_set
     MailSettingsRequest:
@@ -3192,6 +3196,10 @@ components:
           type: string
           format: email
           minLength: 1
+        from_name:
+          type: string
+          description: Display name shown to recipients
+          maxLength: 100
     MailTestRequest:
       type: object
       properties:

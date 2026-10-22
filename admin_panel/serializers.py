@@ -42,6 +42,13 @@ class MailSettingsSerializer(serializers.Serializer):
     use_tls = serializers.BooleanField(required=False)
     use_ssl = serializers.BooleanField(required=False)
     from_email = serializers.EmailField(required=False)
+    from_name = serializers.CharField(max_length=100, allow_blank=True, required=False,
+                                      help_text='Display name shown to recipients')
+
+    def validate_from_name(self, value):
+        if '\r' in value or '\n' in value:
+            raise serializers.ValidationError('Must be a single line.')
+        return value
 
     def validate(self, attrs):
         if attrs.get('use_tls') and attrs.get('use_ssl'):

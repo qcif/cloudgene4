@@ -82,7 +82,7 @@ class GeneralSettingsView(APIView):
 
 
 MAIL_KEYS = ('backend', 'file_path', 'host', 'port', 'user', 'use_tls', 'use_ssl',
-             'from_email')
+             'from_email', 'from_name')
 
 
 class MailSettingsView(APIView):

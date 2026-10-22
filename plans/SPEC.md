@@ -284,6 +284,7 @@ by updating this section.
 | `mail.user` / `mail.password` | str | `''` | SMTP auth (password write-only in APIs) |
 | `mail.use_tls` / `mail.use_ssl` | bool | true / false | SMTP transport security |
 | `mail.from_email` | str | `noreply@localhost` | Sender address |
+| `mail.from_name` | str | `''` | Sender display name (empty = address only) |
 | `nextflow.binary` | str | `nextflow` | Nextflow executable |
 | `nextflow.profile` | str | `''` | Default `-profile` |
 | `nextflow.work_dir` | str | `''` | Work dir (empty = `<job>/work`) |
@@ -570,7 +571,7 @@ Admin     GET /api/admin/dashboard → {queue: {paused, maintenance, maintenance
           GET/PUT /api/admin/settings/general {name, url, max_running_jobs, max_queue_size,
           job_retention_days, max_upload_mb, maintenance, maintenance_message} (PUT = any subset)
           GET/PUT /api/admin/settings/mail {backend, file_path, host, port, user, use_tls, use_ssl,
-          from_email, password_set (read)}; `password` write-only (''/absent = unchanged),
+          from_email, from_name, password_set (read)}; `password` write-only (''/absent = unchanged),
           `clear_password: true` removes it   POST /api/admin/settings/mail/test {to?} → {message,
           to} (default: the admin's e-mail; 502 `mail_failed` on SMTP errors)
           GET/PUT /api/admin/settings/nextflow {binary, profile, work_dir, config, env} (+ variables)

@@ -164,6 +164,32 @@ class MailSettingsTest(Base):
         self.assertFalse(r.json()['password_set'])
         self.assertEqual(self.disk()['mail']['password'], '')
 
+    def test_from_name_round_trip(self):
+        self.as_admin()
+        r = self.client.put('/api/admin/settings/mail/', {'from_name': 'Cloudgene'}, format='json')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()['from_name'], 'Cloudgene')
+        self.assertEqual(self.disk()['mail']['from_name'], 'Cloudgene')
+        self.assertEqual(
+            self.client.get('/api/admin/settings/mail/').json()['from_name'], 'Cloudgene')
+
+    def test_from_name_rejects_newline(self):
+        self.as_admin()
+        r = self.client.put(
+            '/api/admin/settings/mail/', {'from_name': 'A\r\nBcc: x@y.org'}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('from_name', r.json()['error']['fields'])
+
+    def test_from_name_in_from_header(self):
+        self.as_admin()
+        self.client.put('/api/admin/settings/mail/',
+                        {'from_email': 'no@x.org', 'from_name': 'Cloudgene'}, format='json')
+        self.client.post('/api/admin/settings/mail/test/', {'to': 'a@x.org'}, format='json')
+        self.assertEqual(mail.outbox[-1].from_email, 'Cloudgene <no@x.org>')
+        self.client.put('/api/admin/settings/mail/', {'from_name': ''}, format='json')
+        self.client.post('/api/admin/settings/mail/test/', {'to': 'a@x.org'}, format='json')
+        self.assertEqual(mail.outbox[-1].from_email, 'no@x.org')
+
     def test_invalid_backend(self):
         self.as_admin()
         r = self.client.put('/api/admin/settings/mail/', {'backend': 'pigeon'}, format='json')

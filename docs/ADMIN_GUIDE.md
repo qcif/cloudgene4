@@ -93,6 +93,7 @@ on-disk document leniently first).
 | `mail.user` / `mail.password` | string | `''` | SMTP auth; `password` is write-only in the admin API (never read back — only `password_set: true/false` is reported) |
 | `mail.use_tls` / `mail.use_ssl` | bool | `true` / `false` | SMTP transport security — **mutually exclusive**; setting both `true` is rejected |
 | `mail.from_email` | string | `noreply@localhost` | Sender address |
+| `mail.from_name` | string | `''` | Display name shown to recipients (`Name <address>`); empty = address only. The SMTP envelope sender stays the bare address |
 | `nextflow.binary` | string | `nextflow` | Nextflow executable (path or name on `$PATH`) |
 | `nextflow.profile` | string | `''` | Default `-profile` for all workflows (overridden per-app) |
 | `nextflow.work_dir` | string | `''` | Global Nextflow work directory; empty = `<job>/work` (overridden per-app) |
