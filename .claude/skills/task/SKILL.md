@@ -25,3 +25,6 @@ description: Create a new task
 - Do not write markdown links to local files, especially task or spec files.
   Don't use relative paths - they will break later. Just reference files by
   plain text path, relative to the project root.
+- When making updates to application code, consider whether an update to the
+  ansible playbook should be included to make that feature deployable (e.g.
+  config update)
