@@ -808,6 +808,11 @@ was missing.
 | BE-ADM-063 | MUST | `adm::PagesTest::test_admin_crud`, `::test_home_footer_not_deletable`, `::test_admin_invalid_slug`; `e2e:admin_settings::test_d6_edit_home_and_footer`, `::test_d6_create_view_delete_page`, `::test_d6_traversal_slugs_rejected` | unit, e2e | exists |
 | BE-ADM-064 | MUST | `adm::PagesTest::test_admin_crud`, `::test_home_footer_not_deletable`, `::test_admin_invalid_slug`; `e2e:admin_settings::test_d6_edit_home_and_footer`, `::test_d6_create_view_delete_page`, `::test_d6_traversal_slugs_rejected` | unit, e2e | exists |
 | BE-ADM-065 | MAY | `e2e:admin_settings::test_d6_edit_home_and_footer` | e2e | exists |
+| BE-ADM-080 | MUST | `adm::AutoGroupsSettingsTest::test_get_returns_stored_rules_and_activation_flag`, `::test_get_empty_when_key_missing`, `::test_put_replaces_list_keeps_other_keys_and_logs_once`, `::test_put_works_when_stored_rules_are_invalid` | unit | exists |
+| BE-ADM-081 | MUST | `adm::AutoGroupsSettingsTest::test_put_rejects_bad_rules_without_writing`, `::test_put_dedupes_groups_and_keeps_pattern_as_typed` | unit | exists |
+| BE-ADM-082 | MUST | `adm::AutoGroupsSettingsTest::test_put_replaces_list_keeps_other_keys_and_logs_once`, `::test_put_unchanged_does_not_log`, `::test_put_changes_no_memberships` | unit | exists |
+| BE-ADM-083 | MUST | `adm::AutoGroupsSettingsTest::test_test_endpoint_matches_like_activation`, `::test_test_endpoint_never_returns_admin`, `::test_test_endpoint_uses_unsaved_rules_and_writes_nothing`, `::test_test_endpoint_validation`; `e2e:accounts::test_a1c_admin_edits_auto_groups` | unit, e2e | exists |
+| BE-ADM-084 | MUST | `adm::AutoGroupsSettingsTest::test_test_endpoint_uses_unsaved_rules_and_writes_nothing` | unit | exists |
 | BE-ADM-070 | MUST | `adm::LogsTest::test_handler_and_filters`, `::test_unknown_level_filter_is_a_400_not_silently_empty`; `e2e:admin_dashboard::test_d7_logs_show_admin_actions` | unit, e2e | exists |
 | BE-ADM-071 | MUST | `adm::LogsTest::test_handler_and_filters`, `::test_unknown_level_filter_is_a_400_not_silently_empty`; `e2e:admin_dashboard::test_d7_logs_show_admin_actions` | unit, e2e | exists |
 
@@ -948,12 +953,12 @@ requirements, not tests.
 | job-runner.md | 25 | 25 | 23 | 2 | 0 |
 | job-progress-outputs.md | 27 | 26 | 25 | 2 | 0 |
 | jobs-api.md | 25 | 24 | 22 | 2 | 1 |
-| admin-api.md | 41 | 39 | 38 | 2 | 1 |
+| admin-api.md | 46 | 44 | 43 | 2 | 1 |
 | server-pages-mail.md | 27 | 27 | 24 | 3 | 0 |
 | logging.md | 19 | 19 | 13 | 6 | 0 |
 | management-commands.md | 28 | 28 | 20 | 8 | 0 |
 | tests.md | 21 | 21 | 11 | 10 | 0 |
-| **Total** | **521** | **512** | **438** | **77** | **6** |
+| **Total** | **526** | **517** | **443** | **77** | **6** |
 
 MUST requirements: 512, of which 436 have an existing test, 75 have only planned
 tests and 1 has none (BE-API-060, a process rule).

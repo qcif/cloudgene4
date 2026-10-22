@@ -38,6 +38,9 @@ ADMIN_ENDPOINTS = [
     ('put', '/api/admin/settings/nextflow/', {'profile': 'p'}),
     ('get', '/api/admin/settings/navbar/', None),
     ('put', '/api/admin/settings/navbar/', {'navbar': []}),
+    ('get', '/api/admin/settings/auto-groups/', None),
+    ('put', '/api/admin/settings/auto-groups/', {'auto_groups': []}),
+    ('post', '/api/admin/settings/auto-groups/test/', {'email': 'a@b.org'}),
     ('get', '/api/admin/pages/', None),
     ('get', '/api/admin/pages/home/', None),
     ('put', '/api/admin/pages/new-page/', {'html': 'x'}),
@@ -253,6 +256,153 @@ class NavbarTest(Base):
                             format='json')
         self.assertEqual(r.status_code, 400)
         self.assertIn('navbar[0].title', r.json()['error']['fields'])
+
+
+class AutoGroupsSettingsTest(Base):
+    URL = '/api/admin/settings/auto-groups/'
+    TEST_URL = URL + 'test/'
+    UNIMELB = {'pattern': r'.*@(.+\.)?unimelb\.edu\.au', 'groups': ['unimelb']}
+
+    def put(self, rules):
+        return self.client.put(self.URL, {'auto_groups': rules}, format='json')
+
+    def test_get_returns_stored_rules_and_activation_flag(self):
+        config.update_settings({'auto_groups': [self.UNIMELB]})
+        self.as_admin()
+        r = self.client.get(self.URL)
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json(), {'auto_groups': [self.UNIMELB], 'require_activation': True})
+        config.update_settings({'security': {'require_activation': False}})
+        self.assertFalse(self.client.get(self.URL).json()['require_activation'])
+
+    def test_get_empty_when_key_missing(self):
+        self.as_admin()
+        text = config.settings_path().read_text()
+        doc = yaml.safe_load(text)
+        doc.pop('auto_groups', None)
+        config.settings_path().write_text(yaml.safe_dump(doc))
+        self.assertEqual(self.client.get(self.URL).json()['auto_groups'], [])
+
+    def test_put_replaces_list_keeps_other_keys_and_logs_once(self):
+        config.update_settings({'navbar': [{'title': 'Home', 'url': '/'}]})
+        self.as_admin()
+        with self.assertLogs('cloudgene.admin', 'INFO') as logs:
+            r = self.put([self.UNIMELB, {'pattern': '.*@example.org', 'groups': ['ex']}])
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(len(r.json()['auto_groups']), 2)
+        self.assertEqual(len(logs.records), 1)
+        self.assertIn('2 rules', logs.records[0].getMessage())
+        disk = self.disk()
+        self.assertEqual(disk['auto_groups'][0], self.UNIMELB)
+        self.assertEqual(disk['navbar'][0]['title'], 'Home')
+
+    def test_put_unchanged_does_not_log(self):
+        config.update_settings({'auto_groups': [self.UNIMELB]})
+        self.as_admin()
+        with self.assertNoLogs('cloudgene.admin', 'INFO'):
+            self.assertEqual(self.put([self.UNIMELB]).status_code, 200)
+
+    def test_put_rejects_bad_rules_without_writing(self):
+        self.as_admin()
+        before = config.settings_path().read_text()
+        cases = {
+            'blank': ({'pattern': '   ', 'groups': ['g']}, 'pattern'),
+            'long': ({'pattern': 'a' * 501, 'groups': ['g']}, 'pattern'),
+            'regex': ({'pattern': '(', 'groups': ['g']}, 'pattern'),
+            'no groups': ({'pattern': 'a', 'groups': []}, 'groups'),
+            'bad name': ({'pattern': 'a', 'groups': ['no good']}, 'groups'),
+            'admin': ({'pattern': 'a', 'groups': ['admin']}, 'groups'),
+            'Admin': ({'pattern': 'a', 'groups': ['Admin']}, 'groups'),
+        }
+        for label, (rule, field) in cases.items():
+            with self.subTest(label):
+                r = self.put([self.UNIMELB, rule])
+                self.assertEqual(r.status_code, 400, r.content)
+                self.assertEqual(r.json()['error']['code'], 'invalid')
+                self.assertIn(f'auto_groups[1].{field}', r.json()['error']['fields'])
+        self.assertEqual(config.settings_path().read_text(), before)
+
+    def test_put_dedupes_groups_and_keeps_pattern_as_typed(self):
+        self.as_admin()
+        pattern = '.*@Example.ORG  x'
+        r = self.put([{'pattern': pattern, 'groups': ['Lab', 'lab', 'other', 'LAB']}])
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(self.disk()['auto_groups'],
+                         [{'pattern': pattern, 'groups': ['Lab', 'other']}])
+
+    def test_put_works_when_stored_rules_are_invalid(self):
+        doc = self.disk()
+        doc['auto_groups'] = [{'pattern': '(', 'groups': ['admin']}]
+        config.settings_path().write_text(yaml.safe_dump(doc))
+        self.as_admin()
+        self.assertEqual(self.put([self.UNIMELB]).status_code, 200)
+        self.assertEqual(self.disk()['auto_groups'], [self.UNIMELB])
+
+    def test_put_changes_no_memberships(self):
+        self.as_admin()
+        self.put([{'pattern': '.*@x.org', 'groups': ['xs']}])
+        self.assertFalse(Group.objects.filter(name='xs').exists())
+        self.assertEqual(self.alice.groups.count(), 0)
+
+    def test_test_endpoint_matches_like_activation(self):
+        self.as_admin()
+        config.update_settings({'auto_groups': [
+            self.UNIMELB, {'pattern': '.*edu.*', 'groups': ['edu', 'unimelb']},
+            {'pattern': '.*@other.org', 'groups': ['other']}]})
+        r = self.client.post(self.TEST_URL, {'email': 'Jo@Unimelb.EDU.au'}, format='json')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json(), {'email': 'jo@unimelb.edu.au', 'matched_rules': [0, 1],
+                                    'groups': ['unimelb', 'edu']})
+        r = self.client.post(self.TEST_URL, {'email': 'x@unimelb.edu.au.evil.com'},
+                             format='json')
+        self.assertEqual(r.json()['matched_rules'], [1])
+        r = self.client.post(self.TEST_URL, {'email': 'x@nowhere.com'}, format='json')
+        self.assertEqual(r.json()['matched_rules'], [])
+        self.assertEqual(r.json()['groups'], [])
+
+    def test_test_endpoint_never_returns_admin(self):
+        self.as_admin()
+        config.update_settings({'auto_groups': [{'pattern': '.*', 'groups': ['ok']}]})
+        doc = self.disk()
+        doc['auto_groups'] = [{'pattern': '.*', 'groups': ['admin', 'ok']}]
+        config.settings_path().write_text(yaml.safe_dump(doc))
+        r = self.client.post(self.TEST_URL, {'email': 'a@b.org'}, format='json')
+        self.assertNotIn('admin', [g.lower() for g in r.json()['groups']])
+
+    def test_test_endpoint_uses_unsaved_rules_and_writes_nothing(self):
+        self.as_admin()
+        before = config.settings_path().read_text()
+        groups_before = Group.objects.count()
+        body = {'email': 'a@b.org', 'auto_groups': [{'pattern': '.*@b.org', 'groups': ['bs']}]}
+        with self.assertNoLogs('cloudgene.admin', 'INFO'):
+            r = self.client.post(self.TEST_URL, body, format='json')
+        self.assertEqual(r.json()['groups'], ['bs'])
+        self.assertEqual(r.json()['matched_rules'], [0])
+        self.assertEqual(config.settings_path().read_text(), before)
+        self.assertEqual(Group.objects.count(), groups_before)
+
+    def test_test_endpoint_validation(self):
+        self.as_admin()
+        r = self.client.post(self.TEST_URL, {'email': 'nope'}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('email', r.json()['error']['fields'])
+        r = self.client.post(self.TEST_URL, {}, format='json')
+        self.assertIn('email', r.json()['error']['fields'])
+        r = self.client.post(self.TEST_URL, {'email': 'a@b.org',
+                                             'auto_groups': [{'pattern': '(', 'groups': ['g']}]},
+                             format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('auto_groups[0].pattern', r.json()['error']['fields'])
+
+    def test_unsafe_methods_need_csrf(self):
+        client = APIClient(enforce_csrf_checks=True)
+        client.login(username='admin', password=PASSWORD)
+        for method, path, body in (('put', self.URL, {'auto_groups': []}),
+                                   ('post', self.TEST_URL, {'email': 'a@b.org'})):
+            with self.subTest(path=path):
+                r = getattr(client, method)(path, body, format='json')
+                self.assertEqual(r.status_code, 403)
+                self.assertEqual(r.json()['error']['code'], 'csrf_failed')
 
 
 class ServerInfoTest(Base):

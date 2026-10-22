@@ -109,6 +109,65 @@ def test_a1b_activation_applies_auto_groups(page, stack, api, server_settings):
     assert sorted(user['groups']) == ['auto-e2e', 'researchers']
 
 
+@pytest.mark.serial
+def test_a1c_admin_edits_auto_groups(page, stack, api, login, server_settings, expect_api_error):
+    """An admin edits, tests and saves auto_groups rules in the Groups modal; activation uses them."""
+    name = uniq('autoui')
+    email = f'{name}@autoui.e2e.test'
+    group = uniq('autoui-grp')
+    login(page, 'admin')
+    page.goto('/admin/users')
+    page.get_by_test_id('admin-users-manage-groups').click()
+    modal = page.get_by_test_id('group-modal')
+    modal.get_by_test_id('group-tab-auto').click()
+    expect(modal.get_by_test_id('auto-rules-editor')).to_be_visible()
+
+    n_before = modal.get_by_test_id('auto-rule-row').count()
+    modal.get_by_test_id('auto-rule-add').click()
+    row = modal.get_by_test_id('auto-rule-row').nth(n_before)
+    row.get_by_test_id('auto-rule-pattern').fill(r'.*@autoui\.e2e\.test')
+    row.get_by_test_id('auto-rule-group-input').fill(group)
+    row.get_by_test_id('auto-rule-group-add').click()
+    expect(row.get_by_test_id('auto-rule-group-new')).to_be_visible()
+
+    modal.get_by_test_id('auto-test-email').fill(email)
+    modal.get_by_test_id('auto-test-submit').click()
+    expect(modal.get_by_test_id('auto-test-result')).to_contain_text(group)
+    expect(row).to_have_attribute('data-matched', 'true')
+
+    # a bad pattern is rejected under its row and nothing is saved
+    expect_api_error(400, '/api/admin/settings/auto-groups*')
+    row.get_by_test_id('auto-rule-pattern').fill('(')
+    modal.get_by_test_id('auto-rules-save').click()
+    expect(row.get_by_test_id('auto-rule-pattern-error')).to_contain_text('regular expression')
+    assert all(r['pattern'] != '(' for r in api('admin').get_json(
+        '/api/admin/settings/auto-groups/')['auto_groups'])
+
+    row.get_by_test_id('auto-rule-pattern').fill(r'.*@autoui\.e2e\.test')
+    modal.get_by_test_id('auto-rules-save').click()
+    expect(modal.get_by_test_id('auto-rules-success')).to_be_visible()
+
+    page.reload()
+    page.get_by_test_id('admin-users-manage-groups').click()
+    page.get_by_test_id('group-tab-auto').click()
+    expect(page.get_by_test_id('auto-rule-row').nth(n_before).get_by_test_id(
+        'auto-rule-group')).to_contain_text(group)
+
+    page.goto('/register')
+    page.get_by_test_id('register-username').fill(name)
+    page.get_by_test_id('register-full-name').fill('Auto Ui')
+    page.get_by_test_id('register-email').fill(email)
+    page.get_by_test_id('register-password').fill(PASSWORD)
+    page.get_by_test_id('register-password-confirm').fill(PASSWORD)
+    page.get_by_test_id('register-submit').click()
+    expect(page.get_by_test_id('register-success')).to_be_visible()
+    link = extract_link(latest_email(stack.outbox_dir, to=email), '/activate/')
+    page.goto(path_of(link))
+    expect(page.get_by_test_id('activate-success')).to_have_attribute('data-status', 'activated')
+    user = api('admin').get_json(f'/api/admin/users/?search={name}')['results'][0]
+    assert user['groups'] == [group]
+
+
 # --- A2 (K1) -----------------------------------------------------------------------------------
 
 def test_a2_case_variant_duplicates_rejected(page, api, expect_api_error):

@@ -15,7 +15,7 @@ Covered:
 
 | Source | What |
 |--------|------|
-| `admin_panel/views.py`, `admin_panel/serializers.py`, `admin_panel/urls.py` | Dashboard, queue pause/resume, maintenance enter/exit, settings (general, mail, mail test, Nextflow, navbar), pages, logs |
+| `admin_panel/views.py`, `admin_panel/serializers.py`, `admin_panel/urls.py` | Dashboard, queue pause/resume, maintenance enter/exit, settings (general, mail, mail test, Nextflow, navbar, auto-group rules and their test), pages, logs |
 | `accounts/views.py` (`AdminUserViewSet`, `AdminGroupViewSet`), `accounts/serializers.py` (`AdminUserSerializer`, `AdminUserUpdateSerializer`, `AdminGroupSerializer`) | Admin users and groups |
 | `jobs/views.py` (`AdminJobViewSet`) | Admin job list, cancel, restart |
 
@@ -103,6 +103,14 @@ Out of scope (linked instead):
 - **BE-ADM-064** `admin_pages_destroy` MUST delete the file and return 204; `home` and `footer` MUST fail with 400 `protected`; a missing page is 404 `not_found`.
 - **BE-ADM-065** Page HTML is trusted, admin-authored content: the API stores and returns it unchanged. Only admins MAY write it (BE-ADM-001). How it is served publicly is specified in [server-pages-mail.md](server-pages-mail.md).
 
+### Automatic group membership rules
+
+- **BE-ADM-080** `admin_settings_auto_groups_retrieve` MUST return `{auto_groups, require_activation}`: the stored rules as loaded by `core.config`, in file order (`[]` when the key is missing), and the read-only current value of `security.require_activation`. `admin_settings_auto_groups_update` (PUT `{auto_groups}`) MUST replace the whole list, ignore `require_activation`, leave every other `settings.yaml` key (`apps[]` and `navbar` included) as it was, and return the same shape as the GET. It MUST go through `config.update_settings` and so MUST succeed when the stored `auto_groups` currently holds an invalid rule (BE-ADM-058).
+- **BE-ADM-081** Each submitted rule MUST have a `pattern` that is non-blank after trimming, at most `AUTO_GROUPS_PATTERN_MAX` (500) characters and compiles with Python `re`, and a `groups` list of one or more names that each pass `validate_group_name` and are not `admin` in any case. Otherwise the response MUST be 400 `invalid` with `fields` keys `auto_groups[i].pattern` / `auto_groups[i].groups` (BE-ADM-059), and `settings.yaml` MUST NOT be written. Duplicate group names MUST be removed case-insensitively keeping the first spelling; patterns MUST be stored exactly as typed. The regex, length and group-name rules are those of `core.config` ([configuration.md](configuration.md), BE-CONF-011); the serializer MUST call them and MUST NOT define a second copy. An empty pattern is accepted by `core.config` (inert rule) but MUST be rejected here.
+- **BE-ADM-082** When an update changes the rule list it MUST write one INFO record naming the action and the rule count (BE-ADM-003); an update that leaves the list unchanged MUST NOT. Saving rules MUST NOT change any user's group memberships or create any group: rules apply only at later activations ([accounts.md](accounts.md), BE-ACCT-027).
+- **BE-ADM-083** `admin_settings_auto_groups_test` (POST `{email, auto_groups?}`) MUST validate `email` with `validate_email` (400 `invalid`, `fields.email`) and normalise it with `normalize_email` before matching. If `auto_groups` is given it MUST be validated like the PUT (BE-ADM-081) and used instead of the saved rules; otherwise the saved rules are used. Matching MUST use the same function activation uses (`accounts/groups.py::match_auto_groups`: full match, case-insensitive, `admin` removed from the union). The response MUST be `{email, matched_rules, groups}`: the normalised address, the indexes of the matching rules and the union of their groups.
+- **BE-ADM-084** `admin_settings_auto_groups_test` MUST NOT write `settings.yaml`, create groups, change memberships, send mail or write an INFO log record.
+
 ### Logs
 
 - **BE-ADM-070** `admin_logs_list` MUST return `SystemLog` records, paginated, newest first (`timestamp`, then `id` descending), each with `id`, `timestamp`, `level`, `component`, `logger`, `message`, `username` (null if none or the user was deleted) and `metadata`.
@@ -125,6 +133,8 @@ All paths are under `/api/admin/` and accept an optional trailing slash ([api-co
 | `admin_settings_mail_test` | POST `settings/mail/test/` | `MailTestView` |
 | `admin_settings_nextflow_retrieve` / `_update` | GET/PUT `settings/nextflow/` | `NextflowSettingsView` |
 | `admin_settings_navbar_retrieve` / `_update` | GET/PUT `settings/navbar/` | `NavbarSettingsView` |
+| `admin_settings_auto_groups_retrieve` / `_update` | GET/PUT `settings/auto-groups/` | `AutoGroupsSettingsView` |
+| `admin_settings_auto_groups_test` | POST `settings/auto-groups/test/` | `AutoGroupsTestView` |
 | `admin_pages_list` | GET `pages/` | `PageListView` |
 | `admin_pages_retrieve`, `admin_pages_update`, `admin_pages_destroy` | GET/PUT/DELETE `pages/{slug}/` | `PageDetailView` |
 | `admin_logs_list` | GET `logs/` | `LogListView` |
@@ -138,6 +148,7 @@ Settings keys and files written:
 | mail update | `settings.yaml` `mail.*` |
 | Nextflow update | `settings.yaml` `nextflow.*`, `config/nextflow.config`, `config/nextflow.env` |
 | navbar update | `settings.yaml` `navbar` (whole list) |
+| auto-groups update | `settings.yaml` `auto_groups` (whole list) |
 | queue pause/resume | `settings.yaml` `queue.paused` |
 | maintenance enter/exit | `settings.yaml` `server.maintenance`, `server.maintenance_message` |
 | page update/destroy | `pages/<slug>.html` |
@@ -151,6 +162,8 @@ Error codes used here: `not_authenticated` (401), `permission_denied` (403), `cs
 **Mail password.** The serializer pops `password` and `clear_password`. `clear_password: true` wins over `password`. The response never carries the password, only `password_set`.
 
 **Nextflow update order.** `nextflow.*` keys are saved first; only if that succeeds are `config` and `env` written, each by `write_text_atomic`. The two files are not written as one transaction: an I/O error on the second leaves the first updated.
+
+**Auto-group rules.** The serializer validates each rule with `core.config.check_auto_group_rule` (shared with the whole-document validation in `update_settings`, the second check). The test endpoint runs a pattern the admin supplied. It carries the same accepted ReDoS risk as activation ([accounts.md](accounts.md)): only admins can submit patterns, patterns are at most 500 characters and addresses at most 254.
 
 **Mail test.** Sending is synchronous in the request; with SMTP it can block up to the 30 s connection timeout ([server-pages-mail.md](server-pages-mail.md)).
 
@@ -186,6 +199,9 @@ Error codes used here: `not_authenticated` (401), `permission_denied` (403), `cs
 | BE-ADM-057 | `admin_panel/tests/test_api.py::NavbarTest::test_round_trip_and_public_filtering`, `::test_missing_title`; `e2e/tests/test_findings_admin.py::test_c05_navbar_url_is_validated`; `e2e/tests/test_admin_settings.py::test_d6_navbar_editor` | unit, e2e |
 | BE-ADM-058 | `e2e/tests/test_findings_admin.py::test_c02_invalid_settings_value_does_not_take_the_site_down`; `core/tests/test_config.py` (see [configuration.md](configuration.md)) | unit, e2e |
 | BE-ADM-059 | `admin_panel/tests/test_api.py::GeneralSettingsTest::test_validation_errors_in_envelope_fields` | unit |
+| BE-ADM-080, 081, 082 | `admin_panel/tests/test_api.py::AutoGroupsSettingsTest::test_get_returns_stored_rules_and_activation_flag`, `::test_get_empty_when_key_missing`, `::test_put_replaces_list_keeps_other_keys_and_logs_once`, `::test_put_unchanged_does_not_log`, `::test_put_rejects_bad_rules_without_writing`, `::test_put_dedupes_groups_and_keeps_pattern_as_typed`, `::test_put_works_when_stored_rules_are_invalid`, `::test_put_changes_no_memberships`; `e2e/tests/test_accounts.py::test_a1c_admin_edits_auto_groups` | unit, e2e |
+| BE-ADM-083, 084 | `admin_panel/tests/test_api.py::AutoGroupsSettingsTest::test_test_endpoint_matches_like_activation`, `::test_test_endpoint_never_returns_admin`, `::test_test_endpoint_uses_unsaved_rules_and_writes_nothing`, `::test_test_endpoint_validation`; `e2e/tests/test_accounts.py::test_a1c_admin_edits_auto_groups` | unit, e2e |
+| BE-ADM-001, 002 (auto-groups) | `admin_panel/tests/test_api.py::PermissionMatrixTest` (the three operations are in `ADMIN_ENDPOINTS`), `AutoGroupsSettingsTest::test_unsafe_methods_need_csrf` | unit |
 | BE-ADM-060–064 | `admin_panel/tests/test_api.py::PagesTest::test_admin_crud`, `::test_home_footer_not_deletable`, `::test_admin_invalid_slug`; `e2e/tests/test_admin_settings.py::test_d6_edit_home_and_footer`, `::test_d6_create_view_delete_page`, `::test_d6_traversal_slugs_rejected` | unit, e2e |
 | BE-ADM-065 | `e2e/tests/test_admin_settings.py::test_d6_edit_home_and_footer` | e2e |
 | BE-ADM-070, 071 | `admin_panel/tests/test_api.py::LogsTest::test_handler_and_filters`, `::test_unknown_level_filter_is_a_400_not_silently_empty`; `e2e/tests/test_admin_dashboard.py::test_d7_logs_show_admin_actions` | unit, e2e |

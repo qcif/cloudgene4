@@ -274,34 +274,43 @@ def _validate_cross_fields(cleaned: dict, errors: dict) -> None:
             item['url'] = ''
 
 
-def _validate_auto_groups(cleaned: dict, errors: dict) -> None:
-    """``auto_groups[i].pattern`` must compile and be short; ``groups`` names must pass the
-    group name rule and never be ``admin``. Bad values are made inert."""
+def check_auto_group_rule(rule: dict) -> dict[str, list[str]]:
+    """Check one ``auto_groups`` rule and return ``{'pattern'|'groups': [messages]}``.
+
+    ``pattern`` must compile and be short; ``groups`` names must pass the group name rule and
+    never be ``admin``. The rule is mutated in place: a bad pattern is blanked and bad group
+    names are dropped, so the rule is inert rather than wrong."""
     from accounts.validation import validate_group_name
-    for i, rule in enumerate(cleaned.get('auto_groups') or []):
-        pattern = rule.get('pattern') or ''
-        if len(pattern) > AUTO_GROUPS_PATTERN_MAX:
-            errors.setdefault(f'auto_groups[{i}].pattern', []).append(
-                f'Must be at most {AUTO_GROUPS_PATTERN_MAX} characters.')
+    errors: dict[str, list[str]] = {}
+    pattern = rule.get('pattern') or ''
+    if len(pattern) > AUTO_GROUPS_PATTERN_MAX:
+        errors.setdefault('pattern', []).append(
+            f'Must be at most {AUTO_GROUPS_PATTERN_MAX} characters.')
+        rule['pattern'] = ''
+    elif pattern:
+        try:
+            re.compile(pattern)
+        except re.error as exc:
+            errors.setdefault('pattern', []).append(f'Not a valid regular expression: {exc}.')
             rule['pattern'] = ''
-        elif pattern:
-            try:
-                re.compile(pattern)
-            except re.error as exc:
-                errors.setdefault(f'auto_groups[{i}].pattern', []).append(
-                    f'Not a valid regular expression: {exc}.')
-                rule['pattern'] = ''
-        kept = []
-        for name in rule.get('groups') or []:
-            if name.strip().lower() == ADMIN_GROUP_NAME:
-                msg = 'The "admin" group cannot be assigned automatically.'
-            else:
-                msg = validate_group_name(name)
-            if msg:
-                errors.setdefault(f'auto_groups[{i}].groups', []).append(f'{name!r}: {msg}')
-            else:
-                kept.append(name.strip())
-        rule['groups'] = kept
+    kept = []
+    for name in rule.get('groups') or []:
+        if name.strip().lower() == ADMIN_GROUP_NAME:
+            msg = 'The "admin" group cannot be assigned automatically.'
+        else:
+            msg = validate_group_name(name)
+        if msg:
+            errors.setdefault('groups', []).append(f'{name!r}: {msg}')
+        else:
+            kept.append(name.strip())
+    rule['groups'] = kept
+    return errors
+
+
+def _validate_auto_groups(cleaned: dict, errors: dict) -> None:
+    for i, rule in enumerate(cleaned.get('auto_groups') or []):
+        for field, msgs in check_auto_group_rule(rule).items():
+            errors.setdefault(f'auto_groups[{i}].{field}', []).extend(msgs)
 
 
 def _clean(data: dict | None) -> tuple[dict, dict[str, list[str]]]:

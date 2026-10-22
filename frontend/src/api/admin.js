@@ -20,6 +20,12 @@ export const getNextflowSettings = () => client.get('/admin/settings/nextflow/')
 export const updateNextflowSettings = (data) => client.put('/admin/settings/nextflow/', data)
 export const getNavbar = () => client.get('/admin/settings/navbar/')
 export const updateNavbar = (navbar) => client.put('/admin/settings/navbar/', { navbar })
+export const getAutoGroups = () => client.get('/admin/settings/auto-groups/')
+export const updateAutoGroups = (rules) =>
+  client.put('/admin/settings/auto-groups/', { auto_groups: rules })
+// `rules` (unsaved) is optional: omitted, the server tests against the saved rules.
+export const testAutoGroups = (email, rules) =>
+  client.post('/admin/settings/auto-groups/test/', rules ? { email, auto_groups: rules } : { email })
 
 // Pages ($CLOUDGENE_HOME/pages/<slug>.html)
 export const listPages = () => client.get('/admin/pages/')

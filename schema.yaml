@@ -493,6 +493,92 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/admin/settings/auto-groups/:
+    get:
+      operationId: admin_settings_auto_groups_retrieve
+      tags:
+      - admin
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoGroups'
+          description: ''
+        default:
+          description: Error envelope (SPEC §3.5)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      operationId: admin_settings_auto_groups_update
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoGroupsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AutoGroupsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AutoGroupsRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoGroups'
+          description: ''
+        default:
+          description: Error envelope (SPEC §3.5)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/settings/auto-groups/test/:
+    post:
+      operationId: admin_settings_auto_groups_test
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoGroupsTestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AutoGroupsTestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AutoGroupsTestRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoGroupsTestResult'
+          description: ''
+        default:
+          description: Error envelope (SPEC §3.5)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/admin/settings/general/:
     get:
       operationId: admin_settings_general_retrieve
@@ -2325,6 +2411,81 @@ components:
         env:
           type: string
           description: Contents of apps/<id>/nextflow.env (KEY=VALUE)
+    AutoGroupRule:
+      type: object
+      properties:
+        pattern:
+          type: string
+        groups:
+          type: array
+          items:
+            type: string
+      required:
+      - groups
+      - pattern
+    AutoGroupRuleRequest:
+      type: object
+      properties:
+        pattern:
+          type: string
+        groups:
+          type: array
+          items:
+            type: string
+      required:
+      - groups
+      - pattern
+    AutoGroups:
+      type: object
+      properties:
+        auto_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutoGroupRule'
+        require_activation:
+          type: boolean
+          readOnly: true
+      required:
+      - auto_groups
+      - require_activation
+    AutoGroupsRequest:
+      type: object
+      properties:
+        auto_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutoGroupRuleRequest'
+      required:
+      - auto_groups
+    AutoGroupsTestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+        auto_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutoGroupRuleRequest'
+      required:
+      - email
+    AutoGroupsTestResult:
+      type: object
+      properties:
+        email:
+          type: string
+        matched_rules:
+          type: array
+          items:
+            type: integer
+        groups:
+          type: array
+          items:
+            type: string
+      required:
+      - email
+      - groups
+      - matched_rules
     BackendEnum:
       enum:
       - smtp

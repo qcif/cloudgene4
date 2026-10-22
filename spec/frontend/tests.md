@@ -716,6 +716,14 @@ frontend files appear below, followed by this file's own. Legend: see Traceabili
 | FE-AUSER-035 | MUST | `fe:components/GroupModals.test.js › backdrop closes only top modal` (p) | unit | planned |
 | FE-AUSER-040 | MUST | `fe:views/admin-no-vhtml.test.js › user and group names render as text` (p) | unit | planned |
 
+| FE-AUSER-050 | MUST | `fe:components/AutoGroupRulesEditor.test.js › GroupManagementModal automatic membership › shows the load error and asks before discarding unsaved edits` | unit | exists |
+| FE-AUSER-051 | MUST | `fe:components/AutoGroupRulesEditor.test.js › renders the rules and warns only when activation is off` | unit | exists |
+| FE-AUSER-052 | MUST | `fe:components/AutoGroupRulesEditor.test.js › adds, reorders and removes rules`, `› adds existing and new group names, and rejects admin and invalid names` | unit | exists |
+| FE-AUSER-053 | MUST | `fe:components/AutoGroupRulesEditor.test.js › saves the full list and shows server errors under the right row`, `› disables Save while the request runs`; `fe:admin-api.test.js › admin api › %#: request shape (updateAutoGroups)`; `e2e:accounts::test_a1c_admin_edits_auto_groups` | unit, contract, e2e | exists |
+| FE-AUSER-054 | MUST | `fe:components/AutoGroupRulesEditor.test.js › tests an address with the unsaved rules…`, `› omits rules from the test…`, `› shows server errors from the test…`; `fe:admin-api.test.js › admin api › %#: request shape (testAutoGroups)`; `e2e:accounts::test_a1c_admin_edits_auto_groups` | unit, contract, e2e | exists |
+| FE-AUSER-055 | MUST | `fe:components/AutoGroupRulesEditor.test.js › GroupManagementModal automatic membership › marks groups named by a rule and warns when deleting one` | unit | exists |
+| FE-AUSER-056 | MUST | `fe:components/AutoGroupRulesEditor.test.js › renders patterns, group names and results as text` | unit | exists |
+
 ### [admin-workflows.md](admin-workflows.md)
 
 | ID | Lvl | Tests | Layer | Status |
@@ -807,11 +815,11 @@ requirements, not tests.
 | job-list.md | 20 | 17 | 10 | 7 | 3 |
 | job-detail.md | 31 | 28 | 20 | 8 | 3 |
 | admin-dashboard-jobs.md | 18 | 18 | 12 | 6 | 0 |
-| admin-users-groups.md | 19 | 19 | 12 | 7 | 0 |
+| admin-users-groups.md | 26 | 26 | 19 | 7 | 0 |
 | admin-workflows.md | 17 | 17 | 13 | 4 | 0 |
 | admin-settings.md | 24 | 24 | 19 | 5 | 0 |
 | tests.md | 14 | 13 | 7 | 7 | 0 |
-| **Total** | **393** | **370** | **253** | **116** | **24** |
+| **Total** | **400** | **377** | **260** | **116** | **24** |
 
 MUST requirements: 370, of which 252 have an existing test, 114 have only planned tests and 4
 have none (FE-UI-024 (planned), FE-UI-052, FE-UI-053, FE-UI-054). The 20 requirements with no

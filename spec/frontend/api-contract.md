@@ -185,6 +185,9 @@ schema where one is named.
 | admin_settings_mail_test | `sendTestMail` (admin.js:18) | `{to}` or `{}` | MailSettingsView.vue | admin-api (both forms) |
 | admin_settings_navbar_retrieve | `getNavbar` (admin.js:21) | — | GeneralSettingsView.vue | admin-api |
 | admin_settings_navbar_update | `updateNavbar` (admin.js:22) | body `{navbar: [...]}` (array wrapped by the function) | GeneralSettingsView.vue | admin-api |
+| admin_settings_auto_groups_retrieve | `getAutoGroups` (admin.js) | — | GroupManagementModal.vue | admin-users-groups |
+| admin_settings_auto_groups_update | `updateAutoGroups` (admin.js) | body `{auto_groups: [...]}` (array wrapped by the function) | AutoGroupRulesEditor.vue | admin-users-groups |
+| admin_settings_auto_groups_test | `testAutoGroups` (admin.js) | `{email}` or `{email, auto_groups}` (rules omitted when not given) | AutoGroupRulesEditor.vue | admin-users-groups |
 | admin_settings_nextflow_retrieve | `getNextflowSettings` (admin.js:19) | — | views/admin/settings/NextflowSettingsView.vue | admin-api |
 | admin_settings_nextflow_update | `updateNextflowSettings` (admin.js:20) | body = `NextflowSettings` minus `variables` | NextflowSettingsView.vue | admin-api |
 | admin_users_list | `listUsers` (users.js:26) | query: AdminUsersView `{page, page_size: 20, search?}`; GroupMembersModal `{group, page_size: 200}`; never `is_active` | views/admin/AdminUsersView.vue, components/admin/GroupMembersModal.vue | users.test.js › admin users › listUsers → GET /admin/users/ with params (paginated) (`adminUserListSchema`) |

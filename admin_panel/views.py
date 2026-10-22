@@ -14,6 +14,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.groups import match_auto_groups
 from core import config
 from core.exceptions import error_response
 from core.models import WorkerHeartbeat
@@ -206,6 +207,53 @@ class NavbarSettingsView(APIView):
             return _config_error(exc, '')
         logger.info('Navbar changed (%d items)', len(items), extra=_actor(request))
         return Response({'navbar': new['navbar']})
+
+
+class AutoGroupsSettingsView(APIView):
+    permission_classes = [IsAdmin]
+
+    @staticmethod
+    def _payload():
+        return {'auto_groups': config.load_settings().get('auto_groups') or [],
+                'require_activation': config.get('security.require_activation')}
+
+    @extend_schema(operation_id='admin_settings_auto_groups_retrieve',
+                   responses=s.AutoGroupsSerializer)
+    def get(self, request):
+        return Response(self._payload())
+
+    @extend_schema(operation_id='admin_settings_auto_groups_update',
+                   request=s.AutoGroupsSerializer, responses=s.AutoGroupsSerializer)
+    def put(self, request):
+        ser = s.AutoGroupsSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        rules = [dict(rule) for rule in ser.validated_data['auto_groups']]
+        before = config.load_settings().get('auto_groups') or []
+        try:
+            config.update_settings(lambda doc: {**doc, 'auto_groups': rules})
+        except config.ConfigError as exc:
+            return _config_error(exc, '')
+        if rules != before:
+            logger.info('Auto-group rules changed (%d rules)', len(rules),
+                        extra=_actor(request))
+        return Response(self._payload())
+
+
+class AutoGroupsTestView(APIView):
+    permission_classes = [IsAdmin]
+
+    @extend_schema(operation_id='admin_settings_auto_groups_test',
+                   request=s.AutoGroupsTestSerializer,
+                   responses=s.AutoGroupsTestResultSerializer)
+    def post(self, request):
+        ser = s.AutoGroupsTestSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        rules = ser.validated_data.get('auto_groups')
+        if rules is not None:
+            rules = [dict(rule) for rule in rules]
+        email = ser.validated_data['email']
+        matched, groups = match_auto_groups(email, rules)
+        return Response({'email': email, 'matched_rules': matched, 'groups': groups})
 
 
 # --------------------------------------------------------------------------------------

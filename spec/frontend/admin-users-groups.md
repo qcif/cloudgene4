@@ -15,6 +15,9 @@ Covered:
 - `frontend/src/views/admin/AdminUsersView.vue` (route `/admin/users`)
 - `frontend/src/components/admin/GroupManagementModal.vue`
 - `frontend/src/components/admin/GroupMembersModal.vue`
+- `frontend/src/components/admin/AutoGroupRulesEditor.vue` (the "Automatic membership" tab)
+- Admin functions of `frontend/src/api/admin.js`: `getAutoGroups`, `updateAutoGroups`,
+  `testAutoGroups`.
 - Admin functions of `frontend/src/api/users.js`: `listUsers`, `getUser`, `updateUser`,
   `deleteUser`, `listGroups`, `createGroup`, `deleteGroup`.
 - Client-side group-name check `validateGroupName` as used by the group modal (the rule itself
@@ -30,12 +33,14 @@ Out of scope:
 ## Dependencies
 
 - [../backend/admin-api.md](../backend/admin-api.md) — BE-ADM-020…027 (users), BE-ADM-030…032
-  (groups).
+  (groups), BE-ADM-080…084 (auto-group rules).
 - [../backend/accounts.md](../backend/accounts.md) — K1 uniqueness (no duplicate users), group-name rule.
 - [api-client.md](api-client.md) — `apiErrorMessage`, `apiFieldErrors`.
 - [state-stores.md](state-stores.md) — `auth.user.id` to detect the admin's own row.
 - Contract operations: `admin_users_list`, `admin_users_retrieve`, `admin_users_partial_update`,
-  `admin_users_destroy`, `admin_groups_list`, `admin_groups_create`, `admin_groups_destroy`.
+  `admin_users_destroy`, `admin_groups_list`, `admin_groups_create`, `admin_groups_destroy`,
+  `admin_settings_auto_groups_retrieve`, `admin_settings_auto_groups_update`,
+  `admin_settings_auto_groups_test`.
 
 ## Requirements
 
@@ -112,10 +117,52 @@ Out of scope:
   MUST show the envelope message (fallback "Removing the member failed.").
 - **FE-AUSER-035** Closing (X, Close button or backdrop click) MUST close only the topmost modal.
 
+### Automatic membership
+
+- **FE-AUSER-050** `GroupManagementModal` MUST have two tabs, "Groups" (`group-tab-groups`, the
+  default) and "Automatic membership" (`group-tab-auto`). The modal MUST load `getAutoGroups()`
+  once with the group list and show a spinner on the second tab until it returns. On failure the
+  tab MUST show the envelope message, fallback "Could not load automatic membership rules.".
+  If the editor has unsaved changes, switching tab or closing the modal MUST ask for confirmation
+  first and do nothing when declined.
+- **FE-AUSER-051** The editor (`auto-rules-editor`) MUST explain that users join the groups when
+  they activate their account from the e-mail link, that the address must fully match, that
+  existing members are not changed and that patterns are case-insensitive. When
+  `require_activation` is `false` it MUST show `auto-rules-activation-off` ("Account activation
+  is off, so these rules never apply."), and MUST NOT show it otherwise.
+- **FE-AUSER-052** The editor MUST let the admin add (`auto-rule-add`), edit, reorder
+  (`auto-rule-up`/`-down`) and remove (`auto-rule-remove`) rules, shown as `auto-rule-row` with
+  1-based numbers. A rule with a blank pattern MUST show "This rule never matches; fix or remove
+  it.". Groups are chips: the admin MAY pick an existing non-admin group or type a new name; a
+  name that passes `validateGroupName` and is not `admin` (any case) is added, any other is
+  rejected under the row (`auto-rule-groups-error`) without a request. A name that is not an
+  existing group MUST carry a "new" badge (`auto-rule-group-new`); duplicates (any case) MUST be
+  ignored.
+- **FE-AUSER-053** Save (`auto-rules-save`) MUST clear earlier messages, send the full list with
+  `updateAutoGroups(rules)` and stay disabled while the request runs. On success it MUST replace
+  the editor contents with the response and show "Rules saved." (`auto-rules-success`). On 400 it
+  MUST show the envelope message (`auto-rules-error`) and put each `auto_groups[i].pattern` /
+  `auto_groups[i].groups` message under row `i` (`auto-rule-pattern-error`,
+  `auto-rule-groups-error`).
+- **FE-AUSER-054** "Test email" (`auto-test-email`, `auto-test-submit`; Enter submits) MUST check
+  the address with `validateEmail` before any request, then call `testAutoGroups(email, rules)`
+  with the editor's rules when it has unsaved changes and without them otherwise. The result
+  (`auto-test-result`) MUST list the matched rule numbers and the groups, or "No rule matches
+  this address.". Matched rows MUST carry `data-matched="true"`. Editing a rule, adding, removing
+  or reordering rules, adding or removing a group, or editing the address MUST clear the result
+  and highlights. A 400 MUST be shown under the field (`auto-test-error`) for `fields.email`, or
+  under row `i` for `fields.auto_groups[i].…`.
+- **FE-AUSER-055** In the Groups tab, each group named by a rule (case-insensitive) MUST show an
+  "auto" badge (`group-auto-badge`). Its delete confirmation MUST add "Automatic membership
+  rules name this group; it will be created again when a matching user activates.". Deleting a
+  group MUST NOT edit any rule.
+
 ### Rendering safety
 
 - **FE-AUSER-040** Usernames, full names, e-mails and group names MUST be rendered as text in
   all three components (including the delete confirmations); none of them MAY use `v-html`.
+- **FE-AUSER-056** `AutoGroupRulesEditor` MUST render patterns, group names, e-mail addresses
+  and server messages as text; it MUST NOT use `v-html`.
 
 ## Interfaces
 
@@ -128,6 +175,12 @@ Out of scope:
 | Create group | `createGroup({name})` | `admin_groups_create` | `AdminGroupRequest` |
 | Delete group | `deleteGroup(id)` | `admin_groups_destroy` | — |
 | (unused by views) | `getUser(id)` | `admin_users_retrieve` | — |
+| Load rules | `getAutoGroups()` (`admin.js`) | `admin_settings_auto_groups_retrieve` | — |
+| Save rules | `updateAutoGroups(rules)` | `admin_settings_auto_groups_update` | `{auto_groups}` |
+| Test an address | `testAutoGroups(email, rules?)` | `admin_settings_auto_groups_test` | `{email, auto_groups?}` |
+
+`AutoGroupRulesEditor` props: `rules`, `requireActivation`, `existingGroups`; emits `saved` (the
+`AutoGroups` response) and `dirty` (boolean).
 
 Events: `GroupManagementModal` emits `close`, `groups-updated`; `GroupMembersModal` emits
 `close`, `members-changed`. Shapes: `AdminUser`, `PaginatedAdminUserList`, `AdminGroup` — see
@@ -156,6 +209,9 @@ Events: `GroupManagementModal` emits `close`, `groups-updated`; `GroupMembersMod
 | FE-AUSER-024 | `frontend/src/test/views/AdminUsersView.test.js` › own row and superuser buttons disabled (planned) | unit |
 | FE-AUSER-025 | `e2e/tests/test_accounts.py::test_d3_admin_users` (delete) | e2e |
 | FE-AUSER-030, 031, 032 | `e2e/tests/test_accounts.py::test_d3_admin_users` (member counts, create, duplicate in other case, admin delete disabled, delete); `frontend/src/test/contracts/users.test.js` › admin groups › listGroups / createGroup / deleteGroup; `frontend/src/utils/validation.test.js` | e2e, contract, unit |
+| FE-AUSER-050 | `frontend/src/test/components/AutoGroupRulesEditor.test.js` › GroupManagementModal automatic membership › shows the load error and asks before discarding unsaved edits | unit |
+| FE-AUSER-051, 052, 053, 054, 056 | `frontend/src/test/components/AutoGroupRulesEditor.test.js` › AutoGroupRulesEditor › *; `frontend/src/test/admin-api.test.js` (request shapes); `e2e/tests/test_accounts.py::test_a1c_admin_edits_auto_groups` | unit, contract, e2e |
+| FE-AUSER-055 | `frontend/src/test/components/AutoGroupRulesEditor.test.js` › GroupManagementModal automatic membership › marks groups named by a rule and warns when deleting one | unit |
 | FE-AUSER-033, 034 | `e2e/tests/test_admin_users.py::test_group_members_modal_remove_member` (planned) | e2e |
 | FE-AUSER-035 | `frontend/src/test/components/GroupModals.test.js` › backdrop closes only top modal (planned) | unit |
 | FE-AUSER-040 | `frontend/src/test/views/admin-no-vhtml.test.js` › user and group names render as text (planned) | unit |
@@ -174,5 +230,12 @@ Events: `GroupManagementModal` emits `close`, `groups-updated`; `GroupMembersMod
 
 ## Open questions
 
+- If task 01's "admin activation" question is answered yes, the editor's explanatory text
+  (FE-AUSER-051) must change.
+- Should the editor offer "Apply to existing users" (backfill)? Not today; it needs its own task
+  and a decision on whether unverified addresses count.
+- Should the API return the `config_status().errors` entries for `auto_groups`, so the editor can
+  say why a hand-edited rule was made inert? Today the editor shows a blank pattern with a
+  warning.
 - Should the user list expose the `group` / `is_active` filters the API already supports?
 - The members modal duplicates group editing that the user table offers; keep both?

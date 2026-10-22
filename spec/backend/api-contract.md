@@ -290,6 +290,9 @@ not shown under "Notable errors" but always possible: `401` for `user`/`owner`/`
 | admin_settings_mail_test | POST | /api/admin/settings/mail/test/ | admin | `MailTestRequest` | 200 `MailTestResult` | 400 invalid (no recipient); 502 mail_failed | [admin-api.md](admin-api.md) |
 | admin_settings_navbar_retrieve | GET | /api/admin/settings/navbar/ | admin | — | 200 `Navbar` | — | [admin-api.md](admin-api.md) |
 | admin_settings_navbar_update | PUT | /api/admin/settings/navbar/ | admin | `NavbarRequest` | 200 `Navbar` | 400 invalid | [admin-api.md](admin-api.md) |
+| admin_settings_auto_groups_retrieve | GET | /api/admin/settings/auto-groups/ | admin | — | 200 `AutoGroups` | — | [admin-api.md](admin-api.md) |
+| admin_settings_auto_groups_update | PUT | /api/admin/settings/auto-groups/ | admin | `AutoGroupsRequest` | 200 `AutoGroups` | 400 invalid (`auto_groups[i].pattern` / `.groups`) | [admin-api.md](admin-api.md) |
+| admin_settings_auto_groups_test | POST | /api/admin/settings/auto-groups/test/ | admin | `AutoGroupsTestRequest` | 200 `AutoGroupsTestResult` | 400 invalid (`email`, `auto_groups[i].…`) | [admin-api.md](admin-api.md) |
 | admin_settings_nextflow_retrieve | GET | /api/admin/settings/nextflow/ | admin | — | 200 `NextflowSettings` | — | [admin-api.md](admin-api.md) |
 | admin_settings_nextflow_update | PUT | /api/admin/settings/nextflow/ | admin | `NextflowSettingsRequest` | 200 `NextflowSettings` | 400 invalid | [admin-api.md](admin-api.md) |
 | admin_users_list | GET | /api/admin/users/ | admin | query `group`, `is_active`, `page`, `page_size`, `search` | 200 `PaginatedAdminUserList` | — | [admin-api.md](admin-api.md) |
@@ -408,6 +411,8 @@ Request components carry the `Request` suffix (and `Patched` prefix for PATCH) b
 | `MailTestRequest` / `MailTestResult` | Optional recipient / result message and recipient. |
 | `NextflowSettings` / `NextflowSettingsRequest` | Global `nextflow.*` plus global config files and `variables`. |
 | `Navbar` / `NavbarRequest` / `NavbarItem` / `NavbarItemRequest` | Admin navbar editor list and items. |
+| `AutoGroups` / `AutoGroupsRequest` / `AutoGroupRule` / `AutoGroupRuleRequest` | Auto-group rules (`pattern`, `groups`) and the list with the read-only `require_activation`. |
+| `AutoGroupsTestRequest` / `AutoGroupsTestResult` | Address to test and optional unsaved rules / normalised address, matched rule indexes, resulting groups. |
 | `ServerInfo` / `ServerNavbarItem` | Public server name, URL, maintenance, filtered navbar, footer HTML. |
 | `Page` / `PageRequest` / `PageSummary` / `PublicPage` | Admin page (with `deletable`), edit body, list row, public page. |
 | `SystemLog` / `SystemLogLevelEnum` / `PaginatedSystemLogList` | Admin log entry, level enum, paginated list. |

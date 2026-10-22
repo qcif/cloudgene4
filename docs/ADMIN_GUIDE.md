@@ -127,8 +127,10 @@ auto_groups:
   apply when `security.require_activation` is `false`, when an admin activates an account, when a
   user changes their e-mail address, or to users who are already active.
 - Rules only add memberships. They never remove one, and they can never grant `admin`.
-- Edit `auto_groups` in `settings.yaml` by hand; the admin panel does not show it but keeps it when
-  it saves other settings.
+- Edit the rules under **Admin → Users → Groups → Automatic membership**: add, reorder or remove
+  rules, then **Save rules**. Use **Test email** to see which rules an address matches and which
+  groups it would join; it works on the rules as currently typed, saved or not. Saving changes no
+  existing memberships. You can also edit `auto_groups` in `settings.yaml` by hand.
 
 ### Cross-field validation
 

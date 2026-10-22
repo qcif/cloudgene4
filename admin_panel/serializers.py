@@ -1,6 +1,9 @@
 """Serializers for the admin panel API (SPEC §3.6)."""
 from rest_framework import serializers
 
+from accounts.validation import normalize_email, validate_email
+from core import config
+
 from .models import SystemLog
 
 
@@ -98,6 +101,45 @@ class NavbarItemSerializer(serializers.Serializer):
 
 class NavbarSerializer(serializers.Serializer):
     navbar = NavbarItemSerializer(many=True)
+
+
+class AutoGroupRuleSerializer(serializers.Serializer):
+    pattern = serializers.CharField(trim_whitespace=False, allow_blank=True)
+    groups = serializers.ListField(child=serializers.CharField(allow_blank=True),
+                                   allow_empty=False)
+
+    def validate(self, attrs):
+        errors = config.check_auto_group_rule(dict(attrs))
+        if not attrs['pattern'].strip():
+            errors['pattern'] = ['This field may not be blank.']
+        if errors:
+            raise serializers.ValidationError(errors)
+        seen: dict[str, str] = {}
+        for name in attrs['groups']:
+            seen.setdefault(name.strip().lower(), name.strip())
+        return {'pattern': attrs['pattern'], 'groups': list(seen.values())}
+
+
+class AutoGroupsSerializer(serializers.Serializer):
+    auto_groups = AutoGroupRuleSerializer(many=True)
+    require_activation = serializers.BooleanField(read_only=True)
+
+
+class AutoGroupsTestSerializer(serializers.Serializer):
+    email = serializers.CharField()
+    auto_groups = AutoGroupRuleSerializer(many=True, required=False)
+
+    def validate_email(self, value):
+        msg = validate_email(value)
+        if msg:
+            raise serializers.ValidationError(msg)
+        return normalize_email(value)
+
+
+class AutoGroupsTestResultSerializer(serializers.Serializer):
+    email = serializers.CharField()
+    matched_rules = serializers.ListField(child=serializers.IntegerField())
+    groups = serializers.ListField(child=serializers.CharField())
 
 
 # --- pages --------------------------------------------------------------------------------

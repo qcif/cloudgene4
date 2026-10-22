@@ -11,17 +11,27 @@ from core.permissions import ADMIN_GROUP
 logger = logging.getLogger('cloudgene.auth')
 
 
-def matching_group_names(email: str) -> list[str]:
-    """Union of the groups of every rule whose pattern fully matches ``email``."""
+def match_auto_groups(email: str, rules: list[dict] | None = None) -> tuple[list[int], list[str]]:
+    """Indexes of the rules whose pattern fully matches ``email``, and the union of their
+    groups (``admin`` removed). ``rules`` defaults to the saved ``auto_groups``."""
+    if rules is None:
+        rules = config.get('auto_groups') or []
+    indexes: list[int] = []
     names: dict[str, None] = {}
-    for rule in config.get('auto_groups') or []:
+    for i, rule in enumerate(rules):
         pattern = rule.get('pattern')
         if not pattern or not re.fullmatch(pattern, email, re.IGNORECASE):
             continue
+        indexes.append(i)
         for name in rule.get('groups') or []:
             if name.lower() != ADMIN_GROUP.lower():
                 names[name] = None
-    return list(names)
+    return indexes, list(names)
+
+
+def matching_group_names(email: str, rules: list[dict] | None = None) -> list[str]:
+    """Union of the groups of every rule whose pattern fully matches ``email``."""
+    return match_auto_groups(email, rules)[1]
 
 
 def apply_auto_groups(user) -> list[str]:

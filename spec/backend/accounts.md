@@ -293,7 +293,9 @@ so `Bob` and `bob` could both register. Now normalisation (`User.save`), seriali
 - Should `config_status()` warn when `auto_groups` is non-empty while `security.require_activation`
   is `false`? Today the rules are silently never applied.
 - Should a management command backfill `auto_groups` for users who are already active?
-- Should `auto_groups` be editable from Admin → Settings (a separate admin API and frontend task)?
+- ~~Should `auto_groups` be editable from the admin UI?~~ Answered by task 08_auto_groups_admin_ui:
+  rules are edited and tested in Admin → Users → Groups → Automatic membership; see BE-ADM-080…084
+  in [admin-api.md](admin-api.md). The test endpoint shares `match_auto_groups` with activation.
 
 - Activation keys never expire. Should unactivated accounts or keys expire after a set time?
 - Changing the e-mail in `me_partial_update` takes effect immediately, with no confirmation sent
