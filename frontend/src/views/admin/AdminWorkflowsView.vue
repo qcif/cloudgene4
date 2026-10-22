@@ -141,7 +141,7 @@ async function doInstall() {
       </div>
       <div class="form-check">
         <input id="install-public" v-model="install.public" type="checkbox" class="form-check-input" data-testid="workflow-install-public" />
-        <label class="form-check-label" for="install-public">Public (all users)</label>
+        <label class="form-check-label" for="install-public">Public (any logged-in user can run it; groups ignored)</label>
       </div>
       <div class="form-check mb-2">
         <input id="install-copy" v-model="install.copy" type="checkbox" class="form-check-input" data-testid="workflow-install-copy" />

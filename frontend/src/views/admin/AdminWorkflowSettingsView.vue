@@ -154,7 +154,7 @@ async function reload() {
           </div>
           <div class="form-check form-switch mb-3">
             <input id="wf-public" v-model="access.public" type="checkbox" class="form-check-input" data-testid="workflow-public" />
-            <label class="form-check-label" for="wf-public">Public — every user (and anonymous visitors in the list) can see it</label>
+            <label class="form-check-label" for="wf-public">Public — any logged-in user can run it, and anonymous visitors can see it in the list. Group restrictions below are ignored.</label>
           </div>
           <div class="form-check form-switch mb-3">
             <input id="wf-trust-output" v-model="access.trust_output" type="checkbox" class="form-check-input" data-testid="workflow-trust-output" />
@@ -164,7 +164,7 @@ async function reload() {
               Only enable for workflows whose output you trust.
             </div>
           </div>
-          <div class="mb-1 fw-semibold small">Groups allowed to run it <span class="text-muted fw-normal">(admins always can)</span></div>
+          <div class="mb-1 fw-semibold small">Groups allowed to run it <span class="text-muted fw-normal">(admins always can{{ access.public ? '; ignored while Public is on' : '' }})</span></div>
           <div v-for="g in groupChoices" :key="g" class="form-check form-check-inline">
             <input :id="`wf-g-${g}`" v-model="access.groups" :value="g" type="checkbox" class="form-check-input" :data-testid="`workflow-group-${g}`" />
             <label :for="`wf-g-${g}`" class="form-check-label">{{ g }}</label>
