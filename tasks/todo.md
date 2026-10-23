@@ -3,8 +3,6 @@
 
 ## From the spec/ISSUES.md triage (2026-10-23)
 
-Briefed already: WF-01 (task 02), SEC-01 (task 03), SEC-02/03/17 + DEP-12 (task 04), JOB-01 (task 05), TEST-01/02 (task 06), SEC-04 (task 07).
-
 Next up (small, no decision needed):
 - Quick-fixes bundle: FE-03 (admin dashboard ignores `config.errors`), SEC-08 (`create_admin` skips password/e-mail validation and prints generated passwords), SEC-06 (add the `cloudgene.env.example` placeholder key to the weak-key list; the Ansible host uses a vault key, so it only affects manual installs). Optionally SEC-19 (secret-key bootstrap race).
 - FE-01: home page shows only the first 20 workflows. Brief it once the deployment has (or expects) more than 20.
