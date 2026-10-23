@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { updateAutoGroups, testAutoGroups } from '@/api/admin'
 import { apiErrorMessage, apiFieldErrors } from '@/api/client'
-import { validateEmail, validateGroupName } from '@/utils/validation'
+import { validateEmail } from '@/utils/validation'
 import AlertMessage from '@/components/common/AlertMessage.vue'
 
 const props = defineProps({
@@ -19,7 +19,6 @@ const copy = (rules) => rules.map((r) => ({ pattern: r.pattern, groups: [...r.gr
 
 const rows = ref(copy(props.rules))
 const baseline = ref(JSON.stringify(props.rules))
-const newGroup = ref([])
 const rowErrors = ref({})
 const error = ref('')
 const success = ref(false)
@@ -53,12 +52,7 @@ function edited() {
 
 function structural() {
   rowErrors.value = {}
-  newGroup.value = rows.value.map(() => '')
   edited()
-}
-
-function setRowError(i, key, msg) {
-  rowErrors.value = { ...rowErrors.value, [i]: { ...rowErrors.value[i], [key]: [msg] } }
 }
 
 function collectRowErrors(fields) {
@@ -88,22 +82,16 @@ function move(i, delta) {
   structural()
 }
 
-function addGroup(i) {
-  const name = (newGroup.value[i] || '').trim()
+function addGroup(i, name) {
   if (!name) return
-  const msg = name.toLowerCase() === ADMIN
-    ? 'The "admin" group cannot be assigned automatically.'
-    : validateGroupName(name)
-  if (msg) {
-    setRowError(i, 'groups', msg)
-    return
-  }
-  rowErrors.value = { ...rowErrors.value, [i]: { ...rowErrors.value[i], groups: undefined } }
   const groups = rows.value[i].groups
   if (!groups.some((g) => g.toLowerCase() === name.toLowerCase())) groups.push(name)
-  newGroup.value[i] = ''
+  rowErrors.value = { ...rowErrors.value, [i]: { ...rowErrors.value[i], groups: undefined } }
   edited()
 }
+
+const availableGroups = (rule) => groupOptions.value.filter(
+  (n) => !rule.groups.some((g) => g.toLowerCase() === n.toLowerCase()))
 
 function removeGroup(i, name) {
   rows.value[i].groups = rows.value[i].groups.filter((g) => g !== name)
@@ -213,25 +201,16 @@ async function runTest() {
                 @click="removeGroup(i, name)"
               ></button>
             </span>
-            <div class="input-group input-group-sm">
-              <input
-                v-model="newGroup[i]"
-                type="text"
-                :list="`auto-group-options-${i}`"
-                :class="['form-control', rowError(i, 'groups') ? 'is-invalid' : '']"
-                placeholder="Add group"
-                :aria-label="`Add group to rule ${i + 1}`"
-                data-testid="auto-rule-group-input"
-                @keydown.enter.prevent="addGroup(i)"
-              />
-              <datalist :id="`auto-group-options-${i}`">
-                <option v-for="name in groupOptions" :key="name" :value="name"></option>
-              </datalist>
-              <button type="button" class="btn btn-outline-secondary" data-testid="auto-rule-group-add" @click="addGroup(i)">
-                <i class="fas fa-plus"></i>
-              </button>
-              <div class="invalid-feedback" data-testid="auto-rule-groups-error">{{ rowError(i, 'groups') }}</div>
-            </div>
+            <select
+              :class="['form-select form-select-sm w-auto', rowError(i, 'groups') ? 'is-invalid' : '']"
+              :aria-label="`Add group to rule ${i + 1}`"
+              data-testid="auto-rule-group-add"
+              @change="addGroup(i, $event.target.value); $event.target.value = ''"
+            >
+              <option value="">+ group</option>
+              <option v-for="name in availableGroups(rule)" :key="name" :value="name">{{ name }}</option>
+            </select>
+            <div class="invalid-feedback d-block" data-testid="auto-rule-groups-error">{{ rowError(i, 'groups') }}</div>
           </td>
           <td class="text-end text-nowrap">
             <button type="button" class="btn btn-sm btn-link" title="Up" aria-label="Move up" :disabled="i === 0" data-testid="auto-rule-up" @click="move(i, -1)"><i class="fas fa-arrow-up"></i></button>

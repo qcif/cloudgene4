@@ -114,7 +114,7 @@ def test_a1c_admin_edits_auto_groups(page, stack, api, login, server_settings, e
     """An admin edits, tests and saves auto_groups rules in the Groups modal; activation uses them."""
     name = uniq('autoui')
     email = f'{name}@autoui.e2e.test'
-    group = uniq('autoui-grp')
+    group = 'researchers'
     login(page, 'admin')
     page.goto('/admin/groups')
     modal = page.get_by_test_id('group-page')
@@ -125,9 +125,8 @@ def test_a1c_admin_edits_auto_groups(page, stack, api, login, server_settings, e
     modal.get_by_test_id('auto-rule-add').click()
     row = modal.get_by_test_id('auto-rule-row').nth(n_before)
     row.get_by_test_id('auto-rule-pattern').fill(r'.*@autoui\.e2e\.test')
-    row.get_by_test_id('auto-rule-group-input').fill(group)
-    row.get_by_test_id('auto-rule-group-add').click()
-    expect(row.get_by_test_id('auto-rule-group-new')).to_be_visible()
+    row.get_by_test_id('auto-rule-group-add').select_option(group)
+    expect(row.get_by_test_id('auto-rule-group')).to_contain_text(group)
 
     modal.get_by_test_id('auto-test-email').fill(email)
     modal.get_by_test_id('auto-test-submit').click()

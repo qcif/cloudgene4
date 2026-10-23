@@ -60,28 +60,28 @@ describe('AutoGroupRulesEditor', () => {
     expect(wrapper.findAll('[data-testid="auto-rule-row"]')).toHaveLength(2)
   })
 
-  it('adds existing and new group names, and rejects admin and invalid names', async () => {
+  it('adds a group from a select of the existing groups, without admin or groups already in the rule', async () => {
     const wrapper = mountEditor()
-    const input = () => wrapper.findAll('[data-testid="auto-rule-group-input"]')[0]
-    const add = () => wrapper.findAll('[data-testid="auto-rule-group-add"]')[0].trigger('click')
+    const select = () => wrapper.findAll('[data-testid="auto-rule-group-add"]')[0]
+    const optionValues = () => select().findAll('option').map((o) => o.element.value)
+    expect(optionValues()).toEqual(['', 'plain'])
 
-    await input().setValue('plain')
-    await add()
-    await input().setValue('brand-new')
-    await add()
+    await select().setValue('plain')
     const row = wrapper.findAll('[data-testid="auto-rule-row"]')[0]
-    expect(row.text()).toContain('plain')
-    expect(row.findAll('[data-testid="auto-rule-group-new"]')).toHaveLength(1)
+    expect(row.findAll('[data-testid="auto-rule-group"]').map((g) => g.text())).toEqual(['unimelb', 'plain'])
+    expect(optionValues()).toEqual([''])
+    expect(select().element.value).toBe('')
 
-    await input().setValue('Admin')
-    await add()
-    expect(row.get('[data-testid="auto-rule-groups-error"]').text()).toContain('admin')
-    await input().setValue('no good!')
-    await add()
-    expect(row.get('[data-testid="auto-rule-groups-error"]').text()).toContain('Group names')
-    expect(row.findAll('[data-testid="auto-rule-group"]')).toHaveLength(3)
-    expect(wrapper.html()).not.toContain('<option value="admin"')
+    await row.findAll('[data-testid="auto-rule-group-remove"]')[1].trigger('click')
+    expect(optionValues()).toEqual(['', 'plain'])
     expect(updateAutoGroups).not.toHaveBeenCalled()
+  })
+
+  it('marks a group that does not exist yet with a "new" badge', () => {
+    const wrapper = mountEditor()
+    const badges = wrapper.findAll('[data-testid="auto-rule-row"]')[1].findAll('[data-testid="auto-rule-group-new"]')
+    expect(badges).toHaveLength(2)
+    expect(wrapper.findAll('[data-testid="auto-rule-row"]')[0].find('[data-testid="auto-rule-group-new"]').exists()).toBe(false)
   })
 
   it('saves the full list and shows server errors under the right row', async () => {

@@ -135,11 +135,12 @@ Out of scope:
 - **FE-AUSER-052** The editor MUST let the admin add (`auto-rule-add`), edit, reorder
   (`auto-rule-up`/`-down`) and remove (`auto-rule-remove`) rules, shown as `auto-rule-row` with
   1-based numbers. A rule with a blank pattern MUST show "This rule never matches; fix or remove
-  it.". Groups are chips: the admin MAY pick an existing non-admin group or type a new name; a
-  name that passes `validateGroupName` and is not `admin` (any case) is added, any other is
-  rejected under the row (`auto-rule-groups-error`) without a request. A name that is not an
-  existing group MUST carry a "new" badge (`auto-rule-group-new`); duplicates (any case) MUST be
-  ignored.
+  it.". Groups are chips. A select (`auto-rule-group-add`, first option "+ group") MUST offer the
+  existing non-admin groups not already in the rule; choosing one adds it and resets the select.
+  There is no free-text entry, so the editor cannot create groups. A group named by a rule that
+  does not exist (for example from a hand-edited `settings.yaml`) MUST carry a "new" badge
+  (`auto-rule-group-new`). Server errors for `groups` MUST be shown under the row
+  (`auto-rule-groups-error`).
 - **FE-AUSER-053** Save (`auto-rules-save`) MUST clear earlier messages, send the full list with
   `updateAutoGroups(rules)` and stay disabled while the request runs. On success it MUST replace
   the editor contents with the response and show "Rules saved." (`auto-rules-success`). On 400 it

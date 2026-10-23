@@ -719,7 +719,7 @@ frontend files appear below, followed by this file's own. Legend: see Traceabili
 
 | FE-AUSER-050 | MUST | `fe:components/AutoGroupRulesEditor.test.js › AdminGroupsView automatic membership › shows the load error and asks before discarding unsaved edits` | unit | exists |
 | FE-AUSER-051 | MUST | `fe:components/AutoGroupRulesEditor.test.js › renders the rules and warns only when activation is off` | unit | exists |
-| FE-AUSER-052 | MUST | `fe:components/AutoGroupRulesEditor.test.js › adds, reorders and removes rules`, `› adds existing and new group names, and rejects admin and invalid names` | unit | exists |
+| FE-AUSER-052 | MUST | `fe:components/AutoGroupRulesEditor.test.js › adds, reorders and removes rules`, `› adds a group from a select of the existing groups…`, `› marks a group that does not exist yet with a "new" badge` | unit | exists |
 | FE-AUSER-053 | MUST | `fe:components/AutoGroupRulesEditor.test.js › saves the full list and shows server errors under the right row`, `› disables Save while the request runs`; `fe:admin-api.test.js › admin api › %#: request shape (updateAutoGroups)`; `e2e:accounts::test_a1c_admin_edits_auto_groups` | unit, contract, e2e | exists |
 | FE-AUSER-054 | MUST | `fe:components/AutoGroupRulesEditor.test.js › tests an address with the unsaved rules…`, `› omits rules from the test…`, `› shows server errors from the test…`; `fe:admin-api.test.js › admin api › %#: request shape (testAutoGroups)`; `e2e:accounts::test_a1c_admin_edits_auto_groups` | unit, contract, e2e | exists |
 | FE-AUSER-055 | MUST | `fe:components/AutoGroupRulesEditor.test.js › AdminGroupsView automatic membership › marks groups named by a rule and warns when deleting one` | unit | exists |
